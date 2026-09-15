@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+# PHPStan 2.2.14 re-execs itself to enable native acceleration / CLI OPcache.
+# Avoid that restart and worker spawning after observed native memory faults.
+# These flags apply only to this analysis process, not the app or queue worker.
+exec php -d disable_functions=pcntl_exec -d opcache.enable_cli=0 vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress --debug "$@"

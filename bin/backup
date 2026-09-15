@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")/.."
+backup_dir="${1:?Usage: bin/backup /absolute/backup-directory}"
+case "$backup_dir" in /*) ;; *) echo 'Use an absolute directory'; exit 1;; esac
+umask 077
+mkdir -p "$backup_dir"
+test ! -e "$backup_dir/database.dump"
+docker compose stop web worker
+echo 'Web and worker stopped. They remain stopped if a backup step fails.'
+docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup_dir/database.dump"
+docker compose run --rm --no-deps -T app tar -C storage/app/private -czf - . > "$backup_dir/uploads.tar.gz"
+sha256sum "$backup_dir/database.dump" "$backup_dir/uploads.tar.gz" > "$backup_dir/SHA256SUMS"
+docker compose up -d web worker
+echo 'Backup complete. Store APP_KEY separately in your secret manager.'

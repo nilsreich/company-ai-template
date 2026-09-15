@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+kill -0 1
+tr '\000' ' ' < /proc/1/cmdline | grep -q 'queue:work'
+php artisan app:health --quiet

@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+mkdir -p storage/app/private storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+if [ "$(id -u)" = 0 ]; then chown -R www-data:www-data storage bootstrap/cache; fi
+if [ "${1:-}" = worker ]; then
+    php artisan ai:recover
+    exec php artisan queue:work database --sleep=1 --timeout=60 --tries=3 --max-time=3600
+fi
+exec "$@"
