@@ -3,13 +3,16 @@
 namespace App\Ai;
 
 use App\Ai\Agents\InvoiceExtraction;
+use App\Models\Document;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Laravel\Ai\Exceptions\AiException;
 use Laravel\Ai\Exceptions\ProviderConnectionException;
 use Laravel\Ai\Exceptions\ProviderOverloadedException;
 use Laravel\Ai\Exceptions\RateLimitedException;
+use Laravel\Ai\Files\Document as AiDocument;
 use Laravel\Ai\Prompts\AgentPrompt;
 use Laravel\Ai\Providers\OpenAiProvider;
 use Laravel\Ai\Responses\StructuredAgentResponse;
@@ -34,7 +37,9 @@ final class OpenAiDocumentExtractor implements DocumentExtractor
         ], app(Dispatcher::class));
         try {
             $response = $provider->prompt(new AgentPrompt(
-                new InvoiceExtraction($input->promptVersion), $input->text, [],
+                new InvoiceExtraction($input->promptVersion),
+                $input->mimeType === 'application/pdf' ? 'Extract the invoice from the attached PDF.' : $input->text,
+                $input->mimeType === 'application/pdf' ? [AiDocument::fromString($input->text, 'application/pdf')->as('document.pdf')] : [],
                 $provider, $input->model, config()->integer('ai.timeout'),
             ));
         } catch (ProviderConnectionException) {
@@ -55,7 +60,15 @@ final class OpenAiDocumentExtractor implements DocumentExtractor
             throw new ExtractionFailure('invalid_result');
         }
         try {
-            $fields = app(ValidateExtraction::class)->handle($response->toArray());
+            $data = $response->toArray();
+            $confidence = $data['confidence'] ?? [];
+            unset($data['confidence']);
+            Validator::make(['confidence' => $confidence], [
+                'confidence' => ['array:'.implode(',', Document::FIELDS)],
+                'confidence.*' => ['numeric', 'min:0', 'max:1'],
+            ])->validate();
+            $confidence = array_map(static fn ($value): float => (float) $value, $confidence);
+            $fields = app(ValidateExtraction::class)->handle($data);
         } catch (ValidationException) {
             throw new ExtractionFailure('invalid_result');
         }
@@ -67,6 +80,6 @@ final class OpenAiDocumentExtractor implements DocumentExtractor
             }
         }
 
-        return new ExtractionResult($fields, $usage ?: null);
+        return new ExtractionResult($fields, $usage ?: null, $confidence);
     }
 }

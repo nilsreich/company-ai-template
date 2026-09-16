@@ -54,7 +54,7 @@ Das vermeidet typische Lücken eines reinen Codebeispiels. Der Betrieb bleibt de
 | Single-Tenant-Entra-Anmeldung | Implementiert, extern noch abzunehmen | Lokale signierte Fixtures; kein realer Testmandant verwendet |
 | Lokale Rollen und Sitzungswirksamkeit | Implementiert und getestet | Drei feste Rollen, keine freie Rollenmodellierung |
 | Entwicklungslogin nur lokal/testing | Implementiert und getestet | Produktion zusätzlich über Compose und Routing abgesichert |
-| Dokumentenablauf bis CSV | Implementiert und im Browser geprüft | UTF-8-TXT, Einzeldatei und Einzelexport |
+| Dokumentenablauf bis CSV | Implementiert und im Browser geprüft | PDF-/TXT-Einzeldatei und Einzelexport mit acht Spalten |
 | KI-Adapter | Fake und SDK-Live-Adapter vorhanden | OpenAI Responses API; kein realer Modellaufruf ausgeführt |
 | Wiederholung und Idempotenz | Automatisiert geprüft | Keine Garantie gegen doppelte Anbieterabrechnung |
 | Original/Korrektur unterscheidbar | Implementiert | KI-Ergebnis im Lauf, aktuelle Felder im Dokument, Auditänderungen separat |
@@ -172,7 +172,7 @@ Laradock würde neben dem bereits vorhandenen kleinen Compose-Aufbau einen weite
 
 | Erweiterung | Vorher zu klärende Frage | Empfohlene Architekturgrenze | Was zu vermeiden ist |
 | --- | --- | --- | --- |
-| PDF/OCR | Welche Dokumenttypen und welche Erkennungsqualität werden benötigt? | Eingabeaufbereitung erzeugt versionierten Text vor dem Extractor | Parser- und OCR-Aufrufe direkt in Filament |
+| PDF/OCR | Welche Erkennungsqualität wird für Scans ohne Textebene benötigt? | Texterkennung erzeugt versionierten Text vor dem Extractor | Parser- und OCR-Aufrufe direkt in Filament |
 | Chat mit Streaming | Welche Gesprächsdaten und Abbruchregeln gelten? | Eigener autorisierter Anwendungsfall und Streaming-Endpunkt | Dokumentenjobs dauerhaft für offene Chats reservieren |
 | Retrieval | Welche Quellen dürfen welche Benutzer finden? | Berechtigte Dokumente, Chunks und Embeddings; gegebenenfalls pgvector | Zugriffsschutz erst nach dem Abruf vertraulicher Treffer anwenden |
 | Python-Worker | Welche konkrete Bibliothek lässt sich sonst nicht sinnvoll einsetzen? | Enger versionierter Auftrag-/Ergebnisvertrag | Benutzerrechte und Freigaben in einem zweiten Dienst duplizieren |

@@ -28,9 +28,9 @@ abstract class TestCase extends BaseTestCase
         return app(UploadDocument::class)->handle($actor, UploadedFile::fake()->createWithContent('invoice.txt', $text));
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, string|null> */
     protected function fields(): array
     {
-        return ['supplier' => 'Korrigiert GmbH', 'invoice_number' => 'R-123', 'invoice_date' => '2026-09-01', 'total_amount' => '99.95', 'currency' => 'EUR'];
+        return ['supplier' => 'Korrigiert GmbH', 'invoice_number' => 'R-123', 'invoice_date' => '2026-09-01', 'total_amount' => '99.95', 'currency' => 'EUR', 'net_amount' => '83.99', 'tax_amount' => '15.96', 'iban' => null];
     }
 }

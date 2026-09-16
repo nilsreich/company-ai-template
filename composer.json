@@ -12,6 +12,7 @@
         "laravel/framework": "^13.17",
         "laravel/socialite": "^5.31",
         "socialiteproviders/microsoft": "^4.10",
+        "spatie/laravel-activitylog": "^5.0",
         "symfony/intl": "^8.0"
     },
     "require-dev": {

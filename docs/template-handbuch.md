@@ -62,7 +62,7 @@ Die Installation auf einem einzelnen Server ist bewusst überschaubar. Sie begre
 | --- | --- |
 | Anmeldung | Microsoft Entra ID für einen fest konfigurierten Tenant; lokaler Demo-Login mit eigener Umgebungssperre |
 | Benutzer | Lokale Aktivierung und drei feste Rollen; Schutz des letzten aktiven Administrators |
-| Dokumente | Private UTF-8-TXT-Uploads, Größenbegrenzung, Inhaltsprüfung und SHA-256-Prüfsumme |
+| Dokumente | Private PDF-/TXT-Uploads (PDF bis 8 MiB, TXT bis 256 KiB), Inhaltsprüfung und SHA-256-Prüfsumme |
 | Hintergrundverarbeitung | Laravel-Datenbank-Queue, eigener Worker, begrenzte Wiederholungen und Wiederaufnahme verwaister Läufe |
 | KI | Deterministischer Fake und echter OpenAI-Adapter über Laravel AI SDK |
 | Prüfung | Originaltext, Ergebnisfelder, manuelle Korrektur, Versionsprüfung und ausdrückliche Freigabe |
@@ -163,7 +163,7 @@ Es gibt keine zusätzlichen Repository-Abstraktionen über Eloquent, keinen selb
 
 ### 5.3 Wichtige Anwendungsklassen
 
-`UploadDocument` validiert und speichert das Original und legt den ersten Lauf an. `StartExtraction` autorisiert eine Verarbeitung und erzeugt eine dauerhafte Laufabsicht. `ProcessExtraction` übernimmt die Beanspruchung, den Aufruf und die kontrollierte Ergebnisübernahme. `CorrectDocument` validiert menschliche Änderungen und prüft die Bearbeitungsrevision. `ApproveDocument` führt die gesonderte Freigabe durch. `ExportDocument` autorisiert die CSV-Erzeugung. `UpdateUserAccess` verwaltet Aktivierung und Rollen einschließlich des letzten Administrators.
+`UploadDocument` validiert und speichert das Original (PDF oder TXT) und legt den ersten Lauf an. `StartExtraction` autorisiert eine Verarbeitung und erzeugt eine dauerhafte Laufabsicht. `ProcessExtraction` übernimmt die Beanspruchung, den Aufruf und die kontrollierte Ergebnisübernahme. `CorrectDocument` validiert menschliche Änderungen und prüft die Bearbeitungsrevision. `ResetDocumentField` stellt einen einzelnen KI-Ursprungswert wieder her. `RestoreDocumentRevision` übernimmt einen früheren Auditstand als neue Revision. `ApproveDocument` führt die gesonderte Freigabe durch. `ExportDocument` autorisiert die CSV-Erzeugung. `SubmitGoldenDataset` sichert einen freigegebenen Stand als interne Evaluierungs-Fixture. `RejectAuditCleanup` verweigert die Löschung von Audit-Einträgen. `UpdateUserAccess` verwaltet Aktivierung und Rollen einschließlich des letzten Administrators.
 
 Bei Änderungen sollte zuerst geklärt werden, welcher dieser Anwendungsfälle betroffen ist. Ein neues Feld im Formular ist häufig auch eine Änderung am Extraktionsvertrag, an der Validierung und am Export. Eine neue Rolle ist eine Änderung an den Policies, nicht lediglich an der Navigation.
 
@@ -175,8 +175,8 @@ Bei Änderungen sollte zuerst geklärt werden, welcher dieser Anwendungsfälle b
 | Tabelle | Wesentlicher Inhalt | Bedeutung |
 | --- | --- | --- |
 | `users` | Anzeigename, E-Mail, Tenant-/Object-ID, Rolle, Aktivierung und Demo-Kennung | Lokales Benutzerkonto mit externer stabiler Identität |
-| `documents` | Privater Dateipfad, Originalname, Prüfsumme, Eingabeversion, Bearbeitungsrevision, Geschäftsstatus und aktuelle Ergebnisfelder | Der gegenwärtige fachliche Dokumentstand |
-| `ai_runs` | Dokumentbezug, Eingabestand, Startrevision, Laufstatus, Anbieterkennung, Modell, Promptversion, Versuche, Lease und Ergebnis | Geschichte der angeforderten KI-Verarbeitungen |
+| `documents` | Privater Dateipfad, MIME-Typ, Originalname, Prüfsumme, Eingabeversion, Bearbeitungsrevision, Geschäftsstatus und aktuelle Ergebnisfelder (acht Felder, siehe Abschnitt 9.3) | Der gegenwärtige fachliche Dokumentstand |
+| `ai_runs` | Dokumentbezug, Eingabestand, Startrevision, Laufstatus, Anbieterkennung, Modell, Promptversion, Versuche, Lease, Ergebnis, Konfidenz und Tokenverbrauch | Geschichte der angeforderten KI-Verarbeitungen |
 | `audit_entries` | Aktion, Benutzer, Dokument, Änderungen und Zeitpunkt | Nachvollziehbarkeit ausgewählter fachlicher Änderungen |
 
 Daneben bestehen technische Tabellen unter anderem für Jobs, fehlgeschlagene Queue-Jobs, Sessions und den Datenbank-Cache. Die generierte Queue-Grundstruktur kann auch Tabellen enthalten, deren Framework-Funktion im Demoablauf nicht verwendet wird. Telescope ergänzt seine Tabellen ausschließlich über die lokale Migration. Für den Dokumentenfall werden keine SDK-Conversation-Tabellen angelegt.
@@ -255,7 +255,7 @@ Alle Angaben setzen ein aktives Konto voraus.
 | Aktion | editor | reviewer | admin | Zusätzliche Bedingung |
 | --- | --- | --- | --- | --- |
 | Dokumente und KI-Läufe ansehen | Ja | Ja | Ja | Alle Dokumente dieser Installation |
-| TXT-Datei hochladen | Ja | Ja | Ja | Zulässige Datei |
+| PDF-/TXT-Datei hochladen | Ja | Ja | Ja | Zulässige Datei (PDF bis 8 MiB, TXT bis 256 KiB) |
 | Original herunterladen | Ja | Ja | Ja | Autorisierter Dokumentzugriff |
 | Ergebnis korrigieren | Ja | Ja | Ja | Dokument noch nicht freigegeben |
 | Fehlgeschlagene Verarbeitung neu anfordern | Ja | Ja | Ja | Letzter Lauf fehlgeschlagen, Dokument nicht freigegeben, kein aktiver Lauf |
@@ -279,9 +279,9 @@ Rollenänderungen greifen beim nächsten Request. Sie können bereits abgeschlos
 
 ### 9.1 Upload
 
-Filament nimmt zunächst einen temporären privaten Upload entgegen. `UploadDocument` prüft zusätzlich serverseitig die Uploadgültigkeit, die Dateiendung `txt`, die tatsächliche Bytegröße, gültiges UTF-8, einen nicht leeren Inhalt und unzulässige binäre Steuerzeichen. Eine Dateiendung allein reicht also nicht aus, um ein Dokument anzunehmen.
+Filament nimmt zunächst einen temporären privaten Upload entgegen. `UploadDocument` prüft zusätzlich serverseitig die Uploadgültigkeit, die tatsächliche Bytegröße gegen das typabhängige Limit (TXT 256 KiB, PDF 8 MiB) sowie je Typ: bei TXT Dateiendung `txt`, gültiges UTF-8, nicht leeren Inhalt und keine unzulässigen binären Steuerzeichen; bei PDF Dateiendung `pdf`, `%PDF-`-Kopf, `%%EOF`-Ende und MIME-Typ `application/pdf`. Eine Dateiendung allein reicht also nicht aus, um ein Dokument anzunehmen.
 
-Das Original wird auf dem privaten Storage-Disk mit einem erzeugten Pfad gespeichert. Der ursprüngliche Dateiname dient als Anzeigeinformation, nicht als frei wählbarer Speicherpfad. Eine SHA-256-Prüfsumme ermöglicht die spätere Prüfung, ob der gespeicherte Inhalt noch zum Dokumentdatensatz passt.
+Das Original wird auf dem privaten Storage-Disk mit einem erzeugten Pfad und gespeichertem MIME-Typ abgelegt. PDFs werden in der Detailseite über einen autorisierten Inline-Endpunkt im iframe vorgeschaut; TXT wird als Text ausgegeben. Der ursprüngliche Dateiname dient als Anzeigeinformation, nicht als frei wählbarer Speicherpfad. Eine SHA-256-Prüfsumme ermöglicht die spätere Prüfung, ob der gespeicherte Inhalt noch zum Dokumentdatensatz passt.
 
 Anschließend legt eine Datenbanktransaktion Dokument, ersten KI-Lauf und Audit-Eintrag an. Scheitert diese Transaktion, versucht die Anwendung, die zuvor gespeicherte Datei wieder zu entfernen. Dateisystem und Datenbank sind trotzdem keine gemeinsame atomare Transaktion: Ein harter Prozessabbruch zwischen Dateischreiben und Datenbankabschluss kann eine verwaiste Datei hinterlassen. Dafür existiert noch kein gesonderter Bereinigungslauf.
 
@@ -307,18 +307,22 @@ Diese Wiederholungsprüfung ist gewollt. Zwischen Anzeige und Bestätigung könn
 
 ### 9.5 CSV-Export
 
-`ExportDocument` lädt den aktuellen Stand und prüft die Export-Policy. Der Export enthält eine Kopfzeile und genau ein Dokument mit Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag und Währung. Verwendet werden Semikolon, UTF-8 mit BOM und CRLF-Zeilenenden. Das erleichtert die Nutzung in verbreiteten Tabellenkalkulationen; eine konkrete ERP-Importspezifikation ist damit noch nicht erfüllt.
+`ExportDocument` lädt den aktuellen Stand und prüft die Export-Policy. Der Export enthält eine Kopfzeile und genau ein Dokument mit Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag, Währung, Netto, Umsatzsteuer und IBAN. Verwendet werden Semikolon, UTF-8 mit BOM und CRLF-Zeilenenden. Das erleichtert die Nutzung in verbreiteten Tabellenkalkulationen; eine konkrete ERP-Importspezifikation ist damit noch nicht erfüllt.
 
 Zellen mit gefährlichen Formelanfängen werden durch ein vorangestelltes Apostroph als Text markiert. Das betrifft auch einen negativen Betrag. Für einen maschinellen Folgeimport kann deshalb eine eigene, ausdrücklich spezifizierte Exportvariante erforderlich sein. Die jetzige Entscheidung priorisiert die sichere Öffnung in einer Tabellenkalkulation gegenüber einer uneingeschränkten Weiterinterpretation aller Zellen als Zahlen.
 
 Der Audit-Eintrag dokumentiert die erfolgreiche CSV-Erzeugung durch den Server. Er beweist nicht, dass der Browser die gesamte Datei empfangen oder ein Benutzer sie gespeichert hat. Jeder erneute Export kann einen weiteren Audit-Eintrag erzeugen.
+
+### 9.6 Interner Golden-Datensatz zur Extraktionsbewertung
+
+Ein admin kann ein freigegebenes PDF-Dokument über „Golden-Datensatz speichern“ als Evaluierungs-Fixture sichern. `SubmitGoldenDataset` prüft erneut Berechtigung, Prüfsumme und Rechenregeln und legt Original plus erwartete Felder (`original.pdf`, `expected.json`) unter `GOLDEN_DATASET_PATH` (Standard `tests/Fixtures/GoldenDataset`, eigenes Volume) ab. `php artisan ai:eval` misst daran Trefferquote und Konfidenz des gewählten Treibers; ohne `--allow-external` wird nichts an einen Anbieter übertragen, der Bericht enthält keine Dokumentinhalte. Fixtures sind interne Qualitätsdaten und gehören nicht in Git.
 
 <a id="ki"></a>
 ## 10. KI-Anbindung und Validierung
 
 ### 10.1 Die fachliche Schnittstelle
 
-`DocumentExtractor` trennt die Anwendungslogik vom Anbieter. Der Eingang `ExtractionInput` enthält Text, Versuchsnummer, Modell, Promptversion und das gegebenenfalls verwendete Fake-Szenario. `ExtractionResult` enthält Ergebnisfelder und optionale Tokeninformationen. Der Worker muss keine anbieterspezifischen HTTP-Antworten verstehen.
+`DocumentExtractor` trennt die Anwendungslogik vom Anbieter. Der Eingang `ExtractionInput` enthält Text, Versuchsnummer, Modell, Promptversion, das gegebenenfalls verwendete Fake-Szenario und den MIME-Typ. `ExtractionResult` enthält Ergebnisfelder, die KI-Selbsteinschätzung je Feld und optionale Tokeninformationen. Der Worker muss keine anbieterspezifischen HTTP-Antworten verstehen.
 
 Diese Grenze ist klein genug, um verständlich zu bleiben. Sie ist keine universelle Abstraktion für alle möglichen KI-Funktionen. Ein späterer Chat, ein Embedding-Auftrag oder eine Bildanalyse benötigt nicht zwangsläufig denselben fachlichen Vertrag.
 
@@ -341,7 +345,7 @@ Automatisierte Tests setzen die Verzögerung auf null. Der simulierte Timeout is
 
 Der konfigurierte Endpunkt ist die OpenAI Responses API unter `https://api.openai.com/v1/responses`. `AI_URL` bleibt eine vollständige Endpoint-URL; der Adapter leitet daraus die vom SDK benötigte Basis-URL ab. Eine geänderte URL ist Betreiberkonfiguration, keine frei vom Dokument oder Browser wählbare Adresse. Der Adapter setzt HTTPS und den abschließenden Pfad `/responses` voraus.
 
-Der SDK-Aufruf erhält keine Tools, keine vorherige Unterhaltung und keine Möglichkeit, Geschäftsaktionen auszuführen. `store=false` wird gesetzt. Das ist keine umfassende Zusicherung zur Datenaufbewahrung durch den Anbieter; eine Kundenfreigabe der Datenübermittlung bleibt gesondert erforderlich. Das gesamte eingereichte Textdokument wird zum Modellanbieter übertragen.
+Der SDK-Aufruf erhält keine Tools, keine vorherige Unterhaltung und keine Möglichkeit, Geschäftsaktionen auszuführen. `store=false` wird gesetzt. Das ist keine umfassende Zusicherung zur Datenaufbewahrung durch den Anbieter; eine Kundenfreigabe der Datenübermittlung bleibt gesondert erforderlich. Bei TXT wird der gesamte eingereichte Text übertragen; bei PDF wird das Original als Dokumentanhang mit kurzer Extraktionsanweisung übergeben.
 
 `DocumentOpenAiGateway` ergänzt den SDK-Transport um einen Verbindungs-Timeout von fünf Sekunden und deaktivierte HTTP-Redirects. Vor der SDK-Dekodierung prüft es den Antwortstatus, die grundlegende Outputstruktur und eine mögliche Verweigerung. Fehler werden in verständliche Kategorien übersetzt, ohne die vollständige Providerantwort oder einen geheimnishaltigen Exception-Vorgänger weiterzureichen.
 
@@ -349,7 +353,7 @@ Die Anwendung nutzt hier gezielt die strukturierte Ausgabe des SDK. Streaming, T
 
 ### 10.4 Warum strukturierte Ausgabe allein nicht reicht
 
-Das Modellschema verlangt fünf Stringfelder. Anschließend prüft `ValidateExtraction` unabhängig vom Modell, ob die Antwort ein Objekt mit den erlaubten Feldern ist, alle Pflichtfelder vorhanden sind und ihre Inhalte den Regeln entsprechen. Unbekannte Felder werden zurückgewiesen.
+Das Modellschema verlangt acht Ergebnisfelder (Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag, Währung sowie optional Netto, Umsatzsteuer, IBAN) und eine Konfidenzzahl zwischen 0 und 1 je Feld. Anschließend prüft `ValidateExtraction` unabhängig vom Modell, ob die Antwort ein Objekt mit den erlaubten Feldern ist, alle Pflichtfelder vorhanden sind und ihre Inhalte den Regeln entsprechen. Unbekannte Felder werden zurückgewiesen. Die Pflichtfelder Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag und Währung müssen stets vorhanden sein; die Konfidenz beeinflusst die Übernahme nicht, sie wird nur angezeigt und gespeichert.
 
 | Feld | Aktuelle fachliche Prüfung |
 | --- | --- |
@@ -476,7 +480,7 @@ Danach `./bin/dev up` ausführen. Die aktuell eingerichtete Demo wurde unter `ht
 
 ### 13.4 Den Demoablauf nachvollziehen
 
-Als editor eine UTF-8-TXT-Datei unter „Dokumente → Erstellen“ hochladen. Auf der Detailseite die laufende Verarbeitung beobachten. Nach ungefähr acht Sekunden erscheint bei normalem Fake-Verlauf ein Ergebnis. Es enthält Demonstrationswerte; ein beliebiger Rechnungsinhalt ändert daher nicht automatisch Betrag und Lieferant.
+Als editor eine PDF- oder UTF-8-TXT-Datei unter „Dokumente → Erstellen“ hochladen. Auf der Detailseite die laufende Verarbeitung beobachten. Nach ungefähr acht Sekunden erscheint bei normalem Fake-Verlauf ein Ergebnis. Es enthält Demonstrationswerte; ein beliebiger Rechnungsinhalt ändert daher nicht automatisch Betrag und Lieferant.
 
 Über „Werte korrigieren“ die Felder vollständig prüfen und speichern. Danach in einer getrennten Sitzung als reviewer oder admin anmelden, das Dokument öffnen und „Freigeben“ bestätigen. Anschließend steht der CSV-Export zur Verfügung. Beim editor bleibt er auch bei direktem Aufruf verboten.
 
@@ -502,6 +506,7 @@ Die vollständige Vorlage ist [.env.example](../.env.example). Die folgende Übe
 | `FILESYSTEM_DISK` | Standard `private`; die fachlichen Originaldateien verwenden ausdrücklich den privaten Disk |
 | `DEV_LOGIN_ENABLED` | Expliziter Demo-Login; wirkt nur in local/testing |
 | `DOCUMENT_MAX_KIB` | Fachliche TXT-Obergrenze, standardmäßig 256 KiB |
+| `DOCUMENT_PDF_MAX_KIB` | Fachliche PDF-Obergrenze, standardmäßig 8192 KiB |
 | `AI_DRIVER` | `fake` oder `live` |
 | `AI_API_KEY` | Schlüssel für den Live-Anbieter; beim Fake nicht erforderlich |
 | `AI_MODEL` | Zentrale Modellauswahl für neu angelegte Live-Läufe |
@@ -840,7 +845,7 @@ Weitere Worker können den Durchsatz erhöhen, solange Datenbank, Host und Anbie
 | Multitenancy | Eine Firma je Installation; zusätzliche Isolationsregeln würden den Grundfall verkomplizieren | Mehrere Firmen sollen ausdrücklich dieselbe Installation teilen |
 | Separate SPA/API-Architektur | Für Tabellen, Formulare und Freigaben reichen Filament und Livewire | Eigenständige Clients oder deutlich andere Interaktionsanforderungen |
 | Redis / Horizon | Datenbank-Queue und Cache decken den Ausgangsfall ab; kein weiterer Dienst nötig | Gemessene Engpässe oder konkret benötigte Queue-Funktionen |
-| PDF und OCR | Bisher bewusst klar begrenzter TXT-Eingang | Fachlicher Bedarf und definierte Parser-/OCR-Qualität |
+| PDF und OCR | PDF-Upload, Vorschau und Anbieterübergabe vorhanden; keine OCR für Scans ohne Textebene | Fachlicher Bedarf an Texterkennung aus Bildern und definierte Erkennungsqualität |
 | Chat und Token-Streaming | Die Demo ist eine abgeschlossene Extraktion | Interaktive Unterhaltung wird ein eigener Anwendungsfall |
 | Vektordatenbank / pgvector | Keine Retrievalfunktion vorhanden | Belegbare Suche über einen größeren Wissensbestand |
 | Python-Dienst | Kein aktueller Bedarf an Python-Spezialbibliotheken | OCR, ML- oder Analysebibliothek rechtfertigt einen separaten Worker |
@@ -858,7 +863,7 @@ Weitere Worker können den Durchsatz erhöhen, solange Datenbank, Host und Anbie
 
 Die meisten Auslassungen sind keine technische Unmöglichkeit. Sie begrenzen die Zahl ungenutzter Komponenten, die bei jedem Kunden installiert, aktualisiert und erklärt werden müssten. Jede neue Komponente sollte eine konkrete Anforderung bedienen und ihre eigenen Tests, Betriebsfolgen und Zuständigkeiten mitbringen.
 
-PDF/OCR sollte als Eingabeaufbereitung vor dem Extractor entstehen, Chat als eigener autorisierter Streaming-Anwendungsfall, Retrieval zunächst mit passenden PostgreSQL-Erweiterungen und einem Berechtigungskonzept. Ein Python-Worker kann später einen eng definierten Auftrag erhalten, während Laravel weiterhin Benutzer, Freigaben und fachliche Zustände verwaltet. Diese Richtungen sind Erweiterungsvorschläge, keine bereits vorhandenen Implementierungen.
+PDF/OCR sollte als Texterkennung für Scans ohne Textebene vor dem Extractor entstehen, Chat als eigener autorisierter Streaming-Anwendungsfall, Retrieval zunächst mit passenden PostgreSQL-Erweiterungen und einem Berechtigungskonzept. Ein Python-Worker kann später einen eng definierten Auftrag erhalten, während Laravel weiterhin Benutzer, Freigaben und fachliche Zustände verwaltet. Diese Richtungen sind Erweiterungsvorschläge, keine bereits vorhandenen Implementierungen.
 
 <a id="quellen"></a>
 ## 22. Begriffe und weiterführende Dokumentation

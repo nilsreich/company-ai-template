@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Documents\Pages;
 
 use App\Actions\CorrectDocument;
+use App\Actions\ResetDocumentField;
 use App\Filament\Resources\Documents\DocumentResource;
 use App\Models\Document;
 use App\Models\User;
@@ -39,6 +40,18 @@ class EditDocument extends EditRecord
         $this->loadedRevision = $updated->revision;
 
         return $updated;
+    }
+
+    public function resetAiField(string $field): void
+    {
+        $record = $this->getRecord();
+        assert($record instanceof Document);
+        $actor = auth()->user();
+        assert($actor instanceof User);
+        $updated = app(ResetDocumentField::class)->handle($actor, $record, $this->loadedRevision, $field);
+        $this->record = $updated;
+        $this->loadedRevision = $updated->revision;
+        $this->data[$field] = $updated->getAttribute($field);
     }
 
     protected function getHeaderActions(): array

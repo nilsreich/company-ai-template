@@ -18,7 +18,17 @@ class DocumentController extends Controller
     {
         Gate::authorize('download', $document);
 
-        return Storage::disk('private')->download($document->path, 'document-'.$document->id.'.txt', ['Content-Type' => 'text/plain; charset=UTF-8', 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store']);
+        return Storage::disk('private')->download($document->path, 'document-'.$document->id.($document->mime_type === 'application/pdf' ? '.pdf' : '.txt'), ['Content-Type' => $document->mime_type, 'X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store']);
+    }
+
+    public function preview(Document $document): StreamedResponse
+    {
+        Gate::authorize('view', $document);
+
+        return Storage::disk('private')->response($document->path, 'document-'.$document->id.($document->mime_type === 'application/pdf' ? '.pdf' : '.txt'), [
+            'Content-Type' => $document->mime_type, 'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store', 'Content-Security-Policy' => "frame-ancestors 'self'",
+        ]);
     }
 
     public function export(Request $request, Document $document, ExportDocument $export): Response

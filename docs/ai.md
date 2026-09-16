@@ -31,7 +31,7 @@ Der gespeicherte Anbieter und das gespeicherte Modell bestimmen auch spätere Ve
 
 1. Einen separaten Testaccount/API-Schlüssel mit Ausgabenlimit bereitstellen.
 2. In einer isolierten Installation auf `live` umstellen.
-3. Eine synthetische TXT-Rechnung hochladen und Tokenverbrauch, validiertes Ergebnis, Bearbeitung und Freigabe prüfen.
+3. Eine synthetische Rechnung (TXT oder PDF) hochladen und Tokenverbrauch, validiertes Ergebnis, Bearbeitung und Freigabe prüfen.
 4. Schlüssel anschließend entfernen/rotieren und wieder auf `fake` schalten.
 
 Diese externen Schritte sind nicht Teil der regulären Suite und wurden ohne bereitgestellte Zugangsdaten nicht ausgeführt.

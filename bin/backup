@@ -10,6 +10,7 @@ docker compose stop web worker
 echo 'Web and worker stopped. They remain stopped if a backup step fails.'
 docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > "$backup_dir/database.dump"
 docker compose run --rm --no-deps -T app tar -C storage/app/private -czf - . > "$backup_dir/uploads.tar.gz"
-sha256sum "$backup_dir/database.dump" "$backup_dir/uploads.tar.gz" > "$backup_dir/SHA256SUMS"
+docker compose run --rm --no-deps -T app tar -C tests/Fixtures/GoldenDataset -czf - . > "$backup_dir/golden-dataset.tar.gz"
+sha256sum "$backup_dir/database.dump" "$backup_dir/uploads.tar.gz" "$backup_dir/golden-dataset.tar.gz" > "$backup_dir/SHA256SUMS"
 docker compose up -d web worker
 echo 'Backup complete. Store APP_KEY separately in your secret manager.'

@@ -36,9 +36,13 @@ final class ProcessExtraction
             if ($run->attempts >= config()->integer('ai.max_attempts')) {
                 $run->update(['status' => RunStatus::Failed, 'error_category' => 'worker_interrupted', 'finished_at' => now(), 'lease_owner' => null, 'lease_until' => null]);
 
+                Audit::record('extraction_failed', null, $run->document, ['run_id' => $run->id, 'category' => 'worker_interrupted']);
+
                 return null;
             }
             $run->update(['status' => RunStatus::Running, 'attempts' => $run->attempts + 1, 'started_at' => now(), 'lease_owner' => $owner, 'lease_until' => now()->addSeconds(config()->integer('ai.lease_seconds')), 'error_category' => null]);
+
+            Audit::record('extraction_started', null, $run->document, ['run_id' => $run->id, 'attempt' => $run->attempts, 'model' => $run->model, 'prompt_version' => $run->prompt_version]);
 
             return $run;
         });
@@ -61,7 +65,7 @@ final class ProcessExtraction
             $extractor = $run->provider === config()->string('ai.driver') ? $this->extractor : match ($run->provider) {
                 'fake' => app(FakeDocumentExtractor::class), 'live' => app(OpenAiDocumentExtractor::class), default => throw new ExtractionFailure('configuration'),
             };
-            $result = $extractor->extract(new ExtractionInput($text, $run->attempts, $run->model, $run->prompt_version, $run->fake_scenario));
+            $result = $extractor->extract(new ExtractionInput($text, $run->attempts, $run->model, $run->prompt_version, $run->fake_scenario, $document->mime_type));
             $fields = $this->validate->handle($result->fields);
             DB::transaction(function () use ($run, $owner, $fields, $result): void {
                 $document = Document::query()->lockForUpdate()->findOrFail($run->document_id);
@@ -70,10 +74,13 @@ final class ProcessExtraction
                     return;
                 }
                 $apply = $document->input_version === $run->input_version && $document->revision === $run->document_revision && $document->status !== DocumentStatus::Approved;
+                $before = $document->extractionFields();
+                $revision = $document->revision;
                 if ($apply) {
                     $document->update([...$fields, 'revision' => $document->revision + 1, 'status' => DocumentStatus::InReview]);
                 }
-                $current->update(['status' => RunStatus::Succeeded, 'result' => $fields, 'usage' => $result->usage, 'applied' => $apply, 'error_category' => $apply ? null : 'superseded', 'finished_at' => now(), 'lease_owner' => null, 'lease_until' => null]);
+                $current->update(['status' => RunStatus::Succeeded, 'result' => $fields, 'confidence' => $result->confidence, 'usage' => $result->usage, 'applied' => $apply, 'error_category' => $apply ? null : 'superseded', 'finished_at' => now(), 'lease_owner' => null, 'lease_until' => null]);
+                Audit::record('extraction_completed', null, $document, ['run_id' => $current->id, 'applied' => $apply, 'before' => $before, 'after' => $document->extractionFields(), 'result' => $fields, 'confidence' => $result->confidence, 'revision_before' => $revision, 'revision_after' => $document->revision]);
             });
 
             return null;
@@ -81,10 +88,17 @@ final class ProcessExtraction
             $category = $e instanceof ExtractionFailure ? $e->category : ($e instanceof ValidationException ? 'invalid_result' : 'internal_error');
             $retry = $e instanceof ExtractionFailure && $e->retryable && $run->attempts < config()->integer('ai.max_attempts');
             $delay = $run->attempts === 1 ? 10 : 30;
-            $changed = AiRun::whereKey($run->id)->where('lease_owner', $owner)->where('status', RunStatus::Running)->update([
-                'status' => $retry ? RunStatus::Queued->value : RunStatus::Failed->value, 'error_category' => $category,
-                'available_at' => now()->addSeconds($delay), 'finished_at' => $retry ? null : now(), 'lease_owner' => null, 'lease_until' => null,
-            ]);
+            $changed = DB::transaction(function () use ($run, $owner, $retry, $delay, $category): int {
+                $changed = AiRun::whereKey($run->id)->where('lease_owner', $owner)->where('status', RunStatus::Running)->update([
+                    'status' => $retry ? RunStatus::Queued->value : RunStatus::Failed->value, 'error_category' => $category,
+                    'available_at' => now()->addSeconds($delay), 'finished_at' => $retry ? null : now(), 'lease_owner' => null, 'lease_until' => null,
+                ]);
+                if ($changed) {
+                    Audit::record($retry ? 'extraction_retry_scheduled' : 'extraction_failed', null, $run->document, ['run_id' => $run->id, 'attempt' => $run->attempts, 'category' => $category]);
+                }
+
+                return $changed;
+            });
 
             return $retry && $changed ? $delay : null;
         }

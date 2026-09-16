@@ -20,9 +20,12 @@ final class FakeDocumentExtractor implements DocumentExtractor
             return new ExtractionResult(['supplier' => 'Ungültig']);
         }
 
-        return new ExtractionResult([
+        $fields = [
             'supplier' => 'Musterlieferant GmbH', 'invoice_number' => 'DEMO-'.strtoupper(substr(hash('sha256', $input->text), 0, 8)),
             'invoice_date' => '2026-01-15', 'total_amount' => '123.45', 'currency' => 'EUR',
-        ], ['input_tokens' => 100, 'output_tokens' => 40]);
+            'net_amount' => '103.74', 'tax_amount' => '19.71', 'iban' => 'DE89370400440532013000',
+        ];
+
+        return new ExtractionResult($fields, ['input_tokens' => 100, 'output_tokens' => 40], array_fill_keys(array_keys($fields), 0.95));
     }
 }

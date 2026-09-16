@@ -82,7 +82,7 @@ Für eine eigenständige Sicherung ohne gleichzeitiges Deployment:
 ./bin/backup /srv/backups/company-ai/2026-09-14
 ```
 
-Das Skript stoppt Web und Worker, schreibt PostgreSQL-Custom-Dump, privates Dateiarchiv und Prüfsummen und startet erst nach Erfolg wieder. Bei Fehlern bleiben Schreibzugriffe gestoppt. Das Backupverzeichnis muss neu sein. Ein fehlgeschlagener Dump wird nicht als erfolgreiche Sicherung betrachtet.
+Das Skript stoppt Web und Worker, schreibt PostgreSQL-Custom-Dump, privates Dateiarchiv, Golden-Datensatz-Archiv und Prüfsummen und startet erst nach Erfolg wieder. Bei Fehlern bleiben Schreibzugriffe gestoppt. Das Backupverzeichnis muss neu sein. Ein fehlgeschlagener Dump wird nicht als erfolgreiche Sicherung betrachtet.
 
 Die entsprechenden Einzelbefehle im Deployment-Wartungsfenster:
 
@@ -90,7 +90,8 @@ Die entsprechenden Einzelbefehle im Deployment-Wartungsfenster:
 umask 077
 docker compose exec -T db sh -c 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc' > database.dump
 docker compose run --rm --no-deps -T app tar -C storage/app/private -czf - . > uploads.tar.gz
-sha256sum database.dump uploads.tar.gz > SHA256SUMS
+docker compose run --rm --no-deps -T app tar -C tests/Fixtures/GoldenDataset -czf - . > golden-dataset.tar.gz
+sha256sum database.dump uploads.tar.gz golden-dataset.tar.gz > SHA256SUMS
 ```
 
 Datenbank und Dateien gemeinsam sichern, Backups außerhalb des Servers verschlüsselt aufbewahren. APP_KEY und externe Zugangsdaten separat über den Secret-Manager sichern. Aufbewahrungsdauer und regelmäßigen Restore-Test kundenseitig festlegen. Die Anwendung bietet kein automatisches Point-in-Time-Recovery.
@@ -104,6 +105,7 @@ sha256sum -c SHA256SUMS
 docker compose up -d db
 docker compose exec -T db sh -c 'pg_restore --no-owner -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < database.dump
 docker compose run --rm --no-deps -T app tar -C storage/app/private -xzf - < uploads.tar.gz
+docker compose run --rm --no-deps -T app tar -C tests/Fixtures/GoldenDataset -xzf - < golden-dataset.tar.gz
 docker compose run --rm app php artisan migrate --force
 docker compose up -d --no-build app worker web
 ```

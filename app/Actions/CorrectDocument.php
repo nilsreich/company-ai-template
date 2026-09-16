@@ -26,7 +26,7 @@ final class CorrectDocument
             $values = $this->validate->handle($fields);
             $before = $document->extractionFields();
             $document->update([...$values, 'revision' => $revision + 1, 'status' => DocumentStatus::InReview]);
-            Audit::record('corrected', $actor, $document, ['before' => $before, 'after' => $values]);
+            Audit::record('corrected', $actor, $document, ['before' => $before, 'after' => $document->extractionFields(), 'revision_before' => $revision, 'revision_after' => $revision + 1]);
 
             return $document;
         });

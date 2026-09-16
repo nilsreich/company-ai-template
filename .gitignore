@@ -44,3 +44,6 @@ Thumbs.db
 !/.codex/
 /.codex/*
 !/.codex/config.toml
+
+/tests/Fixtures/GoldenDataset/*
+!/tests/Fixtures/GoldenDataset/.gitignore

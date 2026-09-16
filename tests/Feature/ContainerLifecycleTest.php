@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Actions\UploadDocument;
 use App\Enums\RunStatus;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 class ContainerLifecycleTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_database_queue_dispatches_after_commit_and_real_worker_executes(): void
     {

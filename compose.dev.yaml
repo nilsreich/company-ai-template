@@ -9,6 +9,7 @@ services:
       DEV_LOGIN_ENABLED: ${DEV_LOGIN_ENABLED:-false}
     volumes:
       - .:/app
+      - ./tests/Fixtures/GoldenDataset:/app/tests/Fixtures/GoldenDataset
   worker:
     image: company-ai-dev:local
     environment:
@@ -16,6 +17,7 @@ services:
       DEV_LOGIN_ENABLED: ${DEV_LOGIN_ENABLED:-false}
     volumes:
       - .:/app
+      - ./tests/Fixtures/GoldenDataset:/app/tests/Fixtures/GoldenDataset
   web:
     image: nginx:stable-alpine@sha256:dc5069ad14f19660b141b21236140b91656bf89bbc3e2417c70ae650cd66104c
     volumes:

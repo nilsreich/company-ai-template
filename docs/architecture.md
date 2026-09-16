@@ -8,9 +8,9 @@ Die Rollen sind bewusst klein und fest: editor darf hochladen, lesen, korrigiere
 
 ## Grenzen und Datenfluss
 
-`UploadDocument`, `StartExtraction`, `ProcessExtraction`, `CorrectDocument`, `ApproveDocument`, `ExportDocument` und `UpdateUserAccess` kapseln die Anwendungsfälle. Filament übernimmt Darstellung; Policies autorisieren einschließlich direkter Aktionsaufrufe. Middleware und Policies aktualisieren das Benutzerobjekt, damit Rollenänderungen und Deaktivierungen bestehende Sitzungen beim nächsten Request erreichen.
+`UploadDocument`, `StartExtraction`, `ProcessExtraction`, `CorrectDocument`, `ResetDocumentField`, `RestoreDocumentRevision`, `ApproveDocument`, `ExportDocument`, `SubmitGoldenDataset`, `RejectAuditCleanup` und `UpdateUserAccess` kapseln die Anwendungsfälle. Filament übernimmt Darstellung; Policies autorisieren einschließlich direkter Aktionsaufrufe. Middleware und Policies aktualisieren das Benutzerobjekt, damit Rollenänderungen und Deaktivierungen bestehende Sitzungen beim nächsten Request erreichen.
 
-Ein Dokument enthält einen privaten Dateipfad, SHA-256, Eingabeversion und Bearbeitungsrevision sowie die aktuell bearbeiteten Rechnungsfelder. Jeder KI-Lauf speichert Startrevisionen, Anbieter/Modell, Promptversion, Versuchszahl, Zeitpunkte, validiertes Originalergebnis und verfügbaren Tokenverbrauch. `applied=false` mit Kategorie `superseded` macht ein erfolgreiches, aber überholtes Ergebnis erkennbar. Audit-Einträge enthalten Akteur, Zeitpunkt und Änderungen; sie sind kein gegen privilegierte Datenbankadministratoren manipulationsgeschütztes Archiv.
+Ein Dokument enthält einen privaten Dateipfad, MIME-Typ (`text/plain` oder `application/pdf`), SHA-256, Eingabeversion und Bearbeitungsrevision sowie die aktuell bearbeiteten Rechnungsfelder (Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag, Währung sowie optional Netto, Umsatzsteuer, IBAN). Jeder KI-Lauf speichert Startrevisionen, Anbieter/Modell, Promptversion, Versuchszahl, Zeitpunkte, validiertes Originalergebnis, KI-Selbsteinschätzung (Konfidenz je Feld) und verfügbaren Tokenverbrauch. `applied=false` mit Kategorie `superseded` macht ein erfolgreiches, aber überholtes Ergebnis erkennbar. Audit-Einträge enthalten Akteur, Zeitpunkt und Änderungen; sie sind kein gegen privilegierte Datenbankadministratoren manipulationsgeschütztes Archiv.
 
 Kurze Transaktionen beanspruchen einen Lauf per Lease und Besitzer-UUID. Es folgen Dateiprüfung und Modellaufruf ohne offene Anwendungstransaktion. Der Abschluss sperrt Dokument und Lauf und prüft Eigentümer, Lease, Status und beide Versionen erneut. Korrekturen verwenden dieselbe Dokumentensperre und eine optimistische Revision. Ein erfolgreicher KI-Lauf setzt höchstens `in_review`; nur die Freigabeaktion setzt `approved`.
 
@@ -18,7 +18,7 @@ Laravel-Jobs transportieren nur die Lauf-ID. Drei Modellversuche, Backoff 10/30 
 
 ## Präzision und Eingaben
 
-TXT bis standardmäßig 256 KiB, tatsächlich UTF-8, keine Binär-Steuerzeichen. Ein TXT darf HTML-artigen Text enthalten; dieser wird niemals als HTML interpretiert. Geld wird als Dezimalstring validiert und als `numeric(18,4)` gespeichert. ISO-Währung und deren Dezimalstellen werden über Symfony Intl geprüft. Negative Beträge sind für Gutschriften zulässig. Exportwerte mit gefährlichen Formelpräfixen werden als Text markiert.
+TXT bis standardmäßig 256 KiB, tatsächlich UTF-8, keine Binär-Steuerzeichen. Ein TXT darf HTML-artigen Text enthalten; dieser wird niemals als HTML interpretiert. PDF bis standardmäßig 8 MiB, geprüft über `%PDF-`-Kopf, `%%EOF`-Ende und MIME-Typ; die Vorschau erfolgt über einen autorisierten Inline-Endpunkt im iframe, der Download mit passender Dateiendung. Der Live-Adapter übergibt ein PDF als Dokumentanhang an die Responses API; der Fake liefert weiterhin seine festen Demonstrationswerte. Geld wird als Dezimalstring validiert und als `numeric(18,4)` gespeichert. ISO-Währung und deren Dezimalstellen werden über Symfony Intl geprüft. Negative Beträge sind für Gutschriften zulässig. Exportwerte mit gefährlichen Formelpräfixen werden als Text markiert.
 
 Die Upload-Obergrenze von PHP/Nginx beträgt 10/12 MiB; `DOCUMENT_MAX_KIB` muss darunter bleiben. Für deutlich größere Dokumente braucht es zusätzlich ein Tokenbudget und gegebenenfalls Segmentierung; v1 segmentiert nicht stillschweigend.
 
@@ -32,7 +32,7 @@ Die anfängliche Installation konnte vorübergehend über PHP 8.5.6 auf dem Alpi
 
 Live-Extraktion verwendet Laravel AI SDK 0.11.2 hinter `DocumentExtractor`; Telescope 5.24.0 ist eine ausschließlich lokale Entwicklungsabhängigkeit. PHPUnit bleibt erhalten. Pulse und Spatie Backup sind als optionale Betriebsprofile dokumentiert, Pennant und Laradock nicht eingebaut. Begründung und Betriebsregeln stehen in [Paketauswahl](packages.md).
 
-- PDF/OCR: eigene Eingabeaufbereitung vor dem Extractor, versioniertes Textergebnis und separate Dateivalidierung. Kein PDF-Parser in Filament.
+- PDF/OCR: PDF-Upload, Vorschau und Anbieterübergabe als Dokumentanhang sind implementiert. Eine Textextraktion oder OCR aus gescannten PDFs ohne Textevorebene gibt es nicht; solche Dateien liefert der Live-Adapter als Anhang, der Fake beantwortet sie mit Demonstrationswerten. Kein PDF-Parser in Filament.
 - Chat-Streaming: autorisierter Laravel-Streaming-Endpunkt und kleine gezielte Browserkomponente; getrennte Lebensdauer von Chat und Dokumentenjobs.
 - Retrieval: pgvector-Erweiterung in PostgreSQL, getrennte Chunk-/Embedding-Tabellen und dokumentbezogene Berechtigungsprüfung vor Retrieval.
 - Python: separater spezialisierter Worker erst bei notwendiger Bibliothek, mit engem versioniertem Auftrag/Ergebnisvertrag und weiterhin zentralen Laravel-Geschäftsregeln.

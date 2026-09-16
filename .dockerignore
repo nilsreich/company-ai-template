@@ -24,3 +24,5 @@ backups
 .opencode
 .agents
 .ai
+
+tests/Fixtures/GoldenDataset

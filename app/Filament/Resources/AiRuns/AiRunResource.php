@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AiRuns;
 
+use App\Enums\RunStatus;
 use App\Filament\Resources\AiRuns\Pages\ListAiRuns;
 use App\Filament\Resources\AiRuns\Pages\ViewAiRun;
 use App\Models\AiRun;
@@ -24,20 +25,27 @@ class AiRunResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            TextColumn::make('id')->label('Lauf'), TextColumn::make('document.original_name')->label('Dokument')->searchable(),
-            TextColumn::make('status')->badge(), TextColumn::make('attempts')->label('Versuche'),
-            TextColumn::make('error_category')->label('Fehlerkategorie'), TextColumn::make('created_at')->dateTime(),
-        ])->filters([SelectFilter::make('status')->options(['queued' => 'Wartend', 'running' => 'Läuft', 'succeeded' => 'Erfolgreich', 'failed' => 'Fehlgeschlagen'])])->recordActions([ViewAction::make()])->defaultSort('id', 'desc');
+            TextColumn::make('id')->label('Lauf')->sortable(), TextColumn::make('document.original_name')->label('Dokument')->searchable()->placeholder('–'),
+            TextColumn::make('status')->label('Status')->badge()->color(fn ($state): string => match ($state) {
+                RunStatus::Queued, RunStatus::Running => 'warning',
+                RunStatus::Succeeded => 'success',
+                RunStatus::Failed => 'danger',
+                default => 'gray',
+            }), TextColumn::make('attempts')->label('Versuche')->sortable(),
+            TextColumn::make('error_category')->label('Fehlerkategorie')->placeholder('–'), TextColumn::make('created_at')->label('Gestartet')->dateTime('d.m.Y H:i')->sortable(),
+        ])->filters([SelectFilter::make('status')->label('Status')->options(['queued' => 'Wartend', 'running' => 'Läuft', 'succeeded' => 'Erfolgreich', 'failed' => 'Fehlgeschlagen'])])->recordActions([ViewAction::make()->label('Ansehen')])->defaultSort('id', 'desc')
+            ->emptyStateHeading('Keine KI-Läufe vorhanden')
+            ->emptyStateDescription('KI-Läufe entstehen automatisch nach einem Dokument-Upload.');
     }
 
     public static function infolist(Schema $schema): Schema
     {
         $entries = [];
-        foreach (['document.original_name', 'status', 'input_version', 'document_revision', 'provider', 'model', 'prompt_version', 'attempts', 'started_at', 'finished_at', 'error_category', 'applied'] as $field) {
-            $entries[] = TextEntry::make($field);
+        foreach (['document.original_name' => 'Dokument', 'status' => 'Status', 'input_version' => 'Eingaberevision', 'document_revision' => 'Dokumentrevision', 'provider' => 'Anbieter', 'model' => 'Modell', 'prompt_version' => 'Prompt-Version', 'attempts' => 'Versuche', 'started_at' => 'Gestartet', 'finished_at' => 'Beendet', 'error_category' => 'Fehlerkategorie', 'applied' => 'Übernommen'] as $field => $label) {
+            $entries[] = TextEntry::make($field)->label($label)->placeholder('–');
         }
-        foreach (['result', 'usage'] as $field) {
-            $entries[] = TextEntry::make($field)->state(fn (AiRun $record) => json_encode($record->$field, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT))->columnSpanFull();
+        foreach (['result' => 'Validiertes Ergebnis', 'usage' => 'Token-Verbrauch'] as $field => $label) {
+            $entries[] = TextEntry::make($field)->label($label)->placeholder('–')->state(fn (AiRun $record) => $record->$field !== null ? json_encode($record->$field, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) : null)->copyable()->columnSpanFull()->extraAttributes(['style' => 'white-space: pre-wrap']);
         }
 
         return $schema->components($entries);

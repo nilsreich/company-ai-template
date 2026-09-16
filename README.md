@@ -1,6 +1,6 @@
 # KI-Dokumentenprüfung für eine Firma
 
-Laravel 13, Filament 5 / Livewire 4, PHP 8.5, PostgreSQL 18. Eine Installation gehört genau einer Firma. Enthalten sind Entra-Anmeldung, lokale Rollen, private TXT-Uploads, KI-Verarbeitung per Datenbank-Queue, Korrektur, Freigabe, CSV-Export und Audit-Einträge.
+Laravel 13, Filament 5 / Livewire 4, PHP 8.5, PostgreSQL 18. Eine Installation gehört genau einer Firma. Enthalten sind Entra-Anmeldung, lokale Rollen, private PDF-/TXT-Uploads, KI-Verarbeitung per Datenbank-Queue, Korrektur, Freigabe, CSV-Export und Audit-Einträge.
 
 Die **[vollständige Dokumentation](docs/index.md)** enthält ein ausführliches [Handbuch](docs/template-handbuch.md) mit Nutzung, Architektur, exakter Funktionsweise und Kundenanpassung sowie eine [technische Analyse](docs/template-analyse.md) mit Begründungen, Grenzen und priorisierten nächsten Schritten.
 
@@ -25,9 +25,41 @@ Der erste Build lädt Images und Abhängigkeiten. `init` installiert aus Lockfil
 ./bin/dev down
 ```
 
+## Feedback im Prototyp
+
+Angemeldete Benutzer sehen bei `APP_ENV=local` rechts unten **Feedback geben**. Titel, Beschreibung, Bereich, Name/E-Mail und die sichtbaren Metadaten `environment`, `build`, `plan` werden erst nach ausdrücklichem Absenden serverseitig als Issue an ein privates GitHub-Repository übertragen. Es werden keine Seiten-URLs, DOM-Inhalte, Konsolen- oder Netzwerkprotokolle gesammelt.
+
+Ein optionaler Screenshot entsteht über die native [Screen Capture API](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getDisplayMedia): Der Benutzer wählt Tab/Fenster im Browser, die App übernimmt genau ein Bild ohne Ton und beendet alle Aufnahmespuren. Voraussetzung ist HTTPS oder localhost und ein unterstützter Browser. Unter HTTP im LAN bleibt Textfeedback möglich. Die Vorschau lässt sich durch Ziehen mit Maus/Finger schwärzen oder entfernen. Es wird nur das anschließend freigegebene PNG übertragen, maximal 5 MB und 4096 × 4096 Pixel; die Browseraufnahme wird auf maximal 2400 Pixel Kantenlänge verkleinert.
+
+Screenshots bleiben unter `storage/app/private/feedback` im persistenten Upload-Volume. Im GitHub-Issue steht ausschließlich ein interner Link, der eine aktuelle Anmeldung als aktiver Admin verlangt; auch der Ersteller als Editor darf das Bild nicht herunterladen. `APP_URL` muss für diese Links auf die erreichbare interne Basisadresse zeigen. Es gibt keine öffentlichen oder signierten Gast-URLs.
+
+Konfiguration in der nicht versionierten `.env`:
+
+```dotenv
+FEEDBACK_GITHUB_REPOSITORY=owner/private-feedback-repository
+FEEDBACK_GITHUB_TOKEN=
+APP_BUILD=aktueller-git-commit
+APP_PLAN=prototype
+```
+
+Der Token bleibt im Backend. Für regulären Betrieb einen auf das Feedback-Repository begrenzten Fine-grained Token mit **Issues: Read and write** und **Metadata: Read** verwenden. Der lokale Prototyp verwendet ausdrücklich freigegeben die vorhandene GitHub-CLI-Anmeldung; deren Token hat weitergehende Rechte. Nach Konfigurationsänderungen `./bin/dev up`, nach JavaScript/CSS-Änderungen `npm run build` und nach Erstinstallation `./bin/dev artisan migrate` ausführen. `APP_BUILD` bei neuen Builds auf `git rev-parse --short HEAD` aktualisieren. Die Entwicklungssperre gilt auch serverseitig; kein zusätzlicher Feature-Schalter.
+
+Vor jedem Versand werden Repository-Sichtbarkeit, aktivierte Issues und Archivstatus geprüft. Öffentliche Repositories und Redirects werden abgelehnt. Es gibt maximal fünf Einreichungen pro Minute, CSRF-Schutz und serverseitige Datei-/Berechtigungsprüfungen. Text und Kontext werden als Klartextblöcke ins Issue gesetzt. Jede Einreichung erhält eine UUID; erneutes Senden derselben UUID erzeugt kein weiteres Issue. Feedback wird intern in der Tabelle `feedback` gespeichert. Bei Netzwerkproblemen während der Issue-Erstellung lautet der Status `uncertain`; nach einem Prozessabbruch kann `sending` verbleiben. In beiden Fällen zuerst anhand der Referenz im privaten Repository prüfen, bevor ein Administrator einen weiteren Versand veranlasst. Keine automatischen Wiederholungen eines möglicherweise erfolgreichen POST. Bei `failed` hat GitHub abgelehnt. Es gibt noch keine automatische Löschung interner Feedback-Datensätze oder Screenshots.
+
+Prüfung:
+
+```sh
+docker compose -f compose.yaml -f compose.dev.yaml exec -T app vendor/bin/phpunit --filter=FeedbackTest
+node tests/operations/feedback.cjs
+# Optional: legt genau ein markiertes Test-Issue mit dem Demo-Konto an:
+LIVE_GITHUB_FEEDBACK_TEST=1 node tests/operations/feedback.cjs
+```
+
+Der Browsertest verwendet System-Chromium, eine vorübergehende reine Loopback-Weiterleitung auf `E2E_BASE_URL` (Standard: LAN-Demo) und die echte native Tab-Aufnahme mit automatischer Auswahl ausschließlich im Test. Er verändert keine Browser-Sicherheitseinstellungen der Anwendung. Ohne den expliziten Live-Schalter wird die Versandantwort im Browser simuliert; mit ihm werden zusätzlich der echte Issue-Versand und das identische, geschwärzte PNG beim Admin-Download geprüft.
+
 ## Dokumentenablauf
 
-1. Als editor anmelden, unter **Dokumente → Erstellen** eine UTF-8-TXT-Datei hochladen (Standardlimit 256 KiB).
+1. Als editor anmelden, unter **Dokumente → Erstellen** eine PDF-Datei (Standardlimit 8 MiB, Vorschau im Browser) oder eine UTF-8-TXT-Datei (Standardlimit 256 KiB) hochladen.
 2. Detailseite zeigt Originaltext und laufenden Status; nach der Extraktion endet das Polling.
 3. **Werte korrigieren**, Felder prüfen und speichern. Auch während des Bearbeitens ist der Originaltext sichtbar.
 4. Als reviewer oder admin anmelden und **Freigeben** bestätigen.

@@ -52,6 +52,11 @@ class DocumentPolicy
         return $user->active && $user->role !== Role::Editor && $document->status === DocumentStatus::Approved;
     }
 
+    public function submitGolden(User $user, Document $document): bool
+    {
+        return $user->active && $user->role === Role::Admin && $document->status === DocumentStatus::Approved && $document->mime_type === 'application/pdf';
+    }
+
     public function retry(User $user, Document $document): bool
     {
         return $this->update($user, $document) && $document->runs()->latest('id')->first()?->status === RunStatus::Failed;

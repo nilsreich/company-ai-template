@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Ai\FieldAssessment;
 use App\Ai\ValidateExtraction;
 use App\Enums\DocumentStatus;
 use App\Models\Document;
@@ -23,8 +24,9 @@ final class ApproveDocument
                 throw ValidationException::withMessages(['document' => 'Geändertes Dokument bitte erneut prüfen.']);
             }
             $this->validate->handle($document->extractionFields());
+            app(FieldAssessment::class)->assertApprovable($document->extractionFields());
             $document->update(['status' => DocumentStatus::Approved, 'approved_by' => $actor->id, 'approved_at' => now(), 'revision' => $revision + 1]);
-            Audit::record('approved', $actor, $document, ['revision' => $revision]);
+            Audit::record('approved', $actor, $document, ['revision_before' => $revision, 'revision_after' => $revision + 1, 'fields' => $document->extractionFields()]);
         });
     }
 }

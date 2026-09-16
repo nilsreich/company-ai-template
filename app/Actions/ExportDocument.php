@@ -16,7 +16,7 @@ final class ExportDocument
         if ($stream === false) {
             throw new \RuntimeException('CSV konnte nicht erstellt werden.');
         }
-        fputcsv($stream, ['Lieferant', 'Rechnungsnummer', 'Rechnungsdatum', 'Gesamtbetrag', 'Währung'], ';', '"', '', "\r\n");
+        fputcsv($stream, ['Lieferant', 'Rechnungsnummer', 'Rechnungsdatum', 'Gesamtbetrag', 'Währung', 'Netto', 'Umsatzsteuer', 'IBAN'], ';', '"', '', "\r\n");
         fputcsv($stream, array_map($this->safeCell(...), array_values($document->extractionFields())), ';', '"', '', "\r\n");
         rewind($stream);
         $csv = stream_get_contents($stream);
@@ -24,7 +24,7 @@ final class ExportDocument
         if ($csv === false) {
             throw new \RuntimeException('CSV konnte nicht gelesen werden.');
         }
-        Audit::record('exported', $actor, $document, ['revision' => $document->revision]);
+        Audit::record('exported', $actor, $document, ['revision' => $document->revision, 'sha256' => hash('sha256', "\xEF\xBB\xBF".$csv), 'fields' => $document->extractionFields()]);
 
         return "\xEF\xBB\xBF".$csv;
     }

@@ -1,5 +1,21 @@
 # Prüfbericht
 
+## Ergänzung: Doku-Review und UI-Politur am 16. September 2026
+
+- Dokumentation an den implementierten Stand angeglichen: PDF-Upload (8 MiB, Vorschau, Anhang an den Live-Adapter), acht Extraktionsfelder mit Konfidenz, achtspaltiger CSV-Export, `DOCUMENT_PDF_MAX_KIB`, interner Golden-Datensatz (`SubmitGoldenDataset`, `ai:eval`) sowie Golden-Datensatz-Archiv in `bin/backup` und `deployment.md`.
+- Filament-Politur: Statusfarben und Empty-States in Dokumenten- und KI-Lauf-Tabellen, Icons/Farben/Bestätigungsdialoge und Erfolgsmeldungen bei den Dokumentaktionen, deutsche Bezeichnung „Golden-Datensatz speichern“, Upload-Hinweis zu den Größenlimits, Platzhalter und kopierbare JSON-Anzeige in den Infolists, Dark-Mode-taugliche Historie mit Leerzustand.
+- `./bin/dev check` erneut bestanden: Pint 122 Dateien; PHPStan/Larastan Level 8 ohne Fehler; PHPUnit **94 Tests, 418 Assertions**; Composer Audit ohne gemeldete Advisories.
+
+## Ergänzung: eigenes Feedback am 16. September 2026
+
+- Das externe Feedback-SDK wurde aus Paketdateien, App-Code und ausgelieferten Assets entfernt. Der eigene Dialog erscheint nur für angemeldete Benutzer in `local`; die Einreichung ist auch serverseitig auf Entwicklung beschränkt.
+- Docker-Migration und Asset-Build erfolgreich, App/Web/DB/Worker gesund. NPM- und Composer-Audit ohne gemeldete Sicherheitslücken. Pint (110 Dateien) und PHPStan/Larastan erfolgreich. Gesamte PHPUnit-Suite: **91 Tests, 392 Assertions**, davon elf Feedback-Tests.
+- Feedback-Tests prüfen unter anderem Produktionssperre, aktuelle Benutzerberechtigungen, Pflichtfreigabe, PNG-Validierung, ausschließlich private GitHub-Repositories, gesperrte Redirects, serverseitige Metadaten, unveröffentlichte Providerfehler und keine erneute Issue-Erstellung bei derselben UUID oder unklarem Timeout-Ergebnis.
+- Browser auf der HTTP-LAN-Adresse: eigener Button und Formular sichtbar, native Aufnahme deaktiviert mit HTTPS-/localhost-Hinweis, keine JavaScript-Fehler. Marker.io wird nicht mehr geladen.
+- `tests/operations/feedback.cjs`: echte native Tab-Aufnahme mit Chromium über temporäre Loopback-Weiterleitung; alle Tracks nach einem Bild beendet. Schwärzung und mobile Darstellung geprüft. Kein Feedback-Upload vor dem ausdrücklichen Absenden. Die automatische Auswahl des Tabs gilt ausschließlich im Testbrowser.
+- Live-Test mit `LIVE_GITHUB_FEEDBACK_TEST=1`: [markiertes Test-Issue #1](https://github.com/nilsreich/company-ai-feedback/issues/1) im neu angelegten privaten Repository erstellt. Screenshot nur im privaten Upload-Volume; GitHub erhält lediglich einen geschützten Link. Admin-Download entspricht bytegenau dem geschwärzten PNG. Editor erhält 403, Gast wird zur Anmeldung umgeleitet. Kein Kundeninhalt verwendet.
+- Kein HTTPS für die LAN-Demo eingerichtet. Die normale Browser-Berechtigungsauswahl durch einen Menschen wurde nicht automatisiert getestet; der Testbrowser verwendet die automatische Tab-Auswahl. Screenshots/Feedback haben noch keine automatische Aufbewahrungsbegrenzung. Konfiguration und Fehlerbehandlung siehe [README](../README.md#feedback-im-prototyp).
+
 Stand: 15. September 2026. Alle Ausführungen waren lokal; es gab kein externes Deployment und keine echten Entra-/LLM-Aufrufe.
 
 ## Erfolgreich ausgeführt

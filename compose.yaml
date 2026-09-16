@@ -27,6 +27,7 @@ services:
       DB_HOST: db
     volumes:
       - uploads:/app/storage/app/private
+      - golden_dataset:/app/tests/Fixtures/GoldenDataset
     depends_on:
       db:
         condition: service_healthy
@@ -47,6 +48,7 @@ services:
     command: [worker]
     volumes:
       - uploads:/app/storage/app/private
+      - golden_dataset:/app/tests/Fixtures/GoldenDataset
     depends_on:
       db:
         condition: service_healthy
@@ -76,3 +78,4 @@ services:
 volumes:
   database:
   uploads:
+  golden_dataset:

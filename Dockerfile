@@ -32,6 +32,7 @@ ENV APP_ENV=production APP_DEBUG=false
 COPY --from=dependencies --chown=www-data:www-data /app /app
 COPY --from=assets --chown=www-data:www-data /app/public/build /app/public/build
 RUN mkdir -p /app/storage/app/private /app/storage/framework/cache/data /app/storage/framework/sessions /app/storage/framework/views /app/storage/logs && chown -R www-data:www-data /app/storage /app/bootstrap/cache && rm -rf /app/tests /app/.agents /app/.claude /app/.codex /app/.opencode /app/.ai && apt-get purge -y $PHPIZE_DEPS git libpq-dev libicu-dev libzip-dev libonig-dev libxml2-dev && rm -rf /var/lib/apt/lists/*
+RUN mkdir -p /app/tests/Fixtures/GoldenDataset && chown -R www-data:www-data /app/tests && chmod 700 /app/tests/Fixtures/GoldenDataset
 USER www-data
 
 FROM nginx:stable-alpine@sha256:dc5069ad14f19660b141b21236140b91656bf89bbc3e2417c70ae650cd66104c AS web
