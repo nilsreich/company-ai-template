@@ -546,7 +546,7 @@ docker compose -f compose.yaml -f compose.dev.yaml exec -T app sh bin/analyse
 ./bin/dev composer validate --strict
 ```
 
-`bin/analyse` verwendet hier eine besondere Startkonfiguration, weil zuvor native Speicherfehler bei Analyseprozessen beobachtet wurden. CLI-OPcache, ein automatischer Prozessneustart und parallele Analyse werden für diesen Analyseprozess vermieden. Es werden keine PHPStan-Regeln pauschal ausgeblendet. Die ungeklärte technische Ursache und ihre Bedeutung für eine spätere Zielhost-Abnahme stehen im [Prüfbericht](verification.md).
+`bin/analyse` verwendet hier eine besondere Startkonfiguration, weil zuvor native Speicherfehler bei Analyseprozessen beobachtet wurden. CLI-OPcache, ein automatischer Prozessneustart und parallele Analyse werden für diesen Analyseprozess vermieden; zusätzlich erhält PHPStan dort standardmäßig ein CLI-Speicherlimit von `1G`, das bei Bedarf per `PHPSTAN_MEMORY_LIMIT` überschrieben werden kann. Es werden keine PHPStan-Regeln pauschal ausgeblendet. Die ungeklärte technische Ursache und ihre Bedeutung für eine spätere Zielhost-Abnahme stehen im [Prüfbericht](verification.md).
 
 ### 15.2 Was die Tests tatsächlich abdecken
 

@@ -73,7 +73,7 @@ Der Fake liefert absichtlich feste Demonstrationswerte; die Rechnungsnummer hän
 ./bin/dev check
 ```
 
-Das führt Pint, PHPStan/Larastan Level 8, PHPUnit und Composer Audit im PHP-Container aus. `bin/analyse` führt PHPStan nach beobachteten nativen Speicherfehlern ohne CLI-OPcache, automatischen Prozessneustart und parallele Analyse aus (siehe Prüfbericht). Keine Analyseregel wird unterdrückt. Die Testdatenbank `company_ai_test` ist von den Demodaten getrennt. Sie wird von der Suite zurückgesetzt. Tests verwenden Fake-KI bzw. HTTP-/OAuth-Fixtures; externe Zugangsdaten sind nicht nötig.
+Das führt Pint, PHPStan/Larastan Level 8, PHPUnit und Composer Audit im PHP-Container aus. `bin/analyse` führt PHPStan nach beobachteten nativen Speicherfehlern ohne CLI-OPcache, automatischen Prozessneustart und parallele Analyse aus und setzt dafür ein CLI-Speicherlimit von standardmäßig `1G` (per `PHPSTAN_MEMORY_LIMIT` überschreibbar; siehe Prüfbericht). Keine Analyseregel wird unterdrückt. Die Testdatenbank `company_ai_test` ist von den Demodaten getrennt. Sie wird von der Suite zurückgesetzt. Tests verwenden Fake-KI bzw. HTTP-/OAuth-Fixtures; externe Zugangsdaten sind nicht nötig.
 
 Für Browserprüfungen zusätzlich Node 24 auf dem Prüfhost:
 

@@ -53,7 +53,7 @@ class DocumentForm
         }
 
         return $schema->components([
-            FileUpload::make('file')->label('PDF oder UTF-8-TXT-Datei')->helperText('TXT bis 256 KiB, PDF bis 8 MiB. Die Datei bleibt privat gespeichert.')->disk('private')->visibility('private')->storeFiles(false)->acceptedFileTypes(['application/pdf', 'text/plain'])->rules(['extensions:pdf,txt'])->maxSize(config()->integer('documents.pdf_max_kib'))->required()->visibleOn('create')->columnSpanFull(),
+            FileUpload::make('file')->label('PDF oder UTF-8-TXT-Datei')->helperText('TXT bis 256 KiB, PDF bis 8 MiB. Die Datei bleibt privat gespeichert.')->disk('private')->visibility('private')->storeFiles(false)->rules(['extensions:pdf,txt'])->maxSize(config()->integer('documents.pdf_max_kib'))->required()->visibleOn('create')->columnSpanFull(),
             Grid::make(['default' => 1, 'lg' => 2])->schema([
                 Section::make('Originalbeleg')->schema([View::make('filament.documents.original')->viewData(fn (?Document $record): array => ['document' => $record])]),
                 Section::make('Extrahierte Werte prüfen')->description('Grün prüft Rechenregeln, nicht die Übereinstimmung mit dem Original.')->schema($fields),
