@@ -1,5 +1,11 @@
 # Prüfbericht
 
+## Ergänzung: Filament-Runde 2 und Reset-Feld-Test am 16. September 2026
+
+- Sieben unreferenzierte Generator-Stubs (leere Tabellen-/Formular-Klassen, unregistrierte KI-Lauf-Seiten) entfernt; Navigation mit Icons und Sortierung, echte Datensatztitel, benannter Upload-Button, durchsuchbare Revisionsauswahl, Reset-Erfolgsmeldung und Rollenfarben ergänzt. Rechnungsdatum als Kalender mit deutschem Anzeigeformat (Speicherformat `Y-m-d` unverändert).
+- Neue Testlücke geschlossen: `test_ai_field_can_be_restored_as_new_revision_with_notification` prüft Wiederherstellung, Revision, Notification und `field_reset`-Audit. Weiterhin ohne Abdeckung: `RestoreDocumentRevision`, `SubmitGoldenDataset`/`ai:eval`.
+- `./bin/dev check` erneut bestanden: Pint 115 Dateien; PHPStan/Larastan Level 8 ohne Fehler; PHPUnit **95 Tests, 428 Assertions**; Composer Audit ohne gemeldete Advisories.
+
 ## Ergänzung: Doku-Review und UI-Politur am 16. September 2026
 
 - Dokumentation an den implementierten Stand angeglichen: PDF-Upload (8 MiB, Vorschau, Anhang an den Live-Adapter), acht Extraktionsfelder mit Konfidenz, achtspaltiger CSV-Export, `DOCUMENT_PDF_MAX_KIB`, interner Golden-Datensatz (`SubmitGoldenDataset`, `ai:eval`) sowie Golden-Datensatz-Archiv in `bin/backup` und `deployment.md`.

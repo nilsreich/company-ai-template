@@ -79,6 +79,20 @@ class DocumentFlowTest extends TestCase
         $this->assertSame(1, AuditEntry::where('action', 'exported')->count());
     }
 
+    public function test_ai_field_can_be_restored_as_new_revision_with_notification(): void
+    {
+        $editor = User::factory()->create();
+        $document = $this->upload($editor);
+        app(ProcessExtraction::class)->handle($document->runs()->sole()->id);
+        $this->actingAs($editor);
+        Livewire::test(EditDocument::class, ['record' => $document->id])->fillForm([...$this->fields(), 'supplier' => 'Manuell GmbH'])->call('save')->assertHasNoFormErrors();
+        $this->assertSame('Manuell GmbH', $document->refresh()->supplier);
+        Livewire::test(EditDocument::class, ['record' => $document->id])->call('resetAiField', 'supplier')->assertHasNoErrors()->assertNotified();
+        $this->assertSame('Musterlieferant GmbH', $document->refresh()->supplier);
+        $this->assertSame(3, $document->revision);
+        $this->assertSame(1, AuditEntry::where('action', 'field_reset')->count());
+    }
+
     public function test_approved_document_cannot_be_corrected_or_reapproved(): void
     {
         $admin = User::factory()->create(['role' => Role::Admin]);

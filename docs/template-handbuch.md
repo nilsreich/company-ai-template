@@ -293,7 +293,7 @@ Der Worker liest das private Original, prüft die Eingabeversion und die Prüfsu
 
 ### 9.3 Menschliche Korrektur
 
-Die Bearbeitungsseite zeigt Originaltext und Ergebnisfelder. `CorrectDocument` sperrt den Dokumentdatensatz, prüft die Berechtigung und vergleicht die vom Formular geladene Revision mit dem aktuellen Stand. Bei einer zwischenzeitlichen Änderung wird das Speichern abgelehnt; der Benutzer muss neu laden.
+Die Bearbeitungsseite zeigt Originaltext und Ergebnisfelder. Das Rechnungsdatum wird über einen Kalender im deutschen Anzeigeformat gewählt; alle übrigen Felder sind Texteingaben mit Live-Hinweisen zur Rechenprüfung und KI-Konfidenz. `CorrectDocument` sperrt den Dokumentdatensatz, prüft die Berechtigung und vergleicht die vom Formular geladene Revision mit dem aktuellen Stand. Bei einer zwischenzeitlichen Änderung wird das Speichern abgelehnt; der Benutzer muss neu laden.
 
 Eine Korrektur enthält im gegenwärtigen Formular immer alle Pflichtfelder. Unvollständige Teilergebnisse können nicht als beliebiger Zwischenentwurf gespeichert werden. Ein vollständig und gültig manuell erfasster Stand kann hingegen auch dann `in_review` werden, wenn die KI noch läuft oder fehlgeschlagen ist. Die Anwendung verlangt vor Freigabe keinen erfolgreichen KI-Lauf, sondern einen gültigen menschlich prüfbaren Dokumentstand.
 

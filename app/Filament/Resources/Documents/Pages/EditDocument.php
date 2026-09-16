@@ -8,6 +8,7 @@ use App\Filament\Resources\Documents\DocumentResource;
 use App\Models\Document;
 use App\Models\User;
 use Filament\Actions\ViewAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
@@ -52,6 +53,7 @@ class EditDocument extends EditRecord
         $this->record = $updated;
         $this->loadedRevision = $updated->revision;
         $this->data[$field] = $updated->getAttribute($field);
+        Notification::make()->title('KI-Wert wiederhergestellt')->body('Das Feld wurde als neue Revision gespeichert.')->success()->send();
     }
 
     protected function getHeaderActions(): array

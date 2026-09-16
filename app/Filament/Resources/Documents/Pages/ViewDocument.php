@@ -69,7 +69,7 @@ class ViewDocument extends ViewRecord
         return [
             EditAction::make()->label('Werte korrigieren')->icon(Heroicon::PencilSquare),
             Action::make('restoreRevision')->label('Früheren Stand übernehmen')->icon(Heroicon::ArrowUturnLeft)->modalHeading('Früheren Stand als neue Revision übernehmen')->authorize('update')
-                ->schema([Select::make('entry_id')->label('Historischer Stand')->required()->options(fn (): array => AuditEntry::where('document_id', $this->document()->id)->whereIn('action', ['corrected', 'revision_restored', 'field_reset', 'extraction_completed'])->orderByDesc('chain_position')->limit(100)->get()->filter(function (AuditEntry $entry): bool {
+                ->schema([Select::make('entry_id')->label('Historischer Stand')->required()->searchable()->options(fn (): array => AuditEntry::where('document_id', $this->document()->id)->whereIn('action', ['corrected', 'revision_restored', 'field_reset', 'extraction_completed'])->orderByDesc('chain_position')->limit(100)->get()->filter(function (AuditEntry $entry): bool {
                     $changes = $entry->changes;
 
                     return is_array($changes) && ! empty($changes['after']['supplier']);

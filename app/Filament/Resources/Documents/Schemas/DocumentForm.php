@@ -6,6 +6,7 @@ use App\Ai\FieldAssessment;
 use App\Filament\Resources\Documents\Pages\EditDocument;
 use App\Models\Document;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Grid;
@@ -23,11 +24,14 @@ class DocumentForm
     {
         $fields = [];
         foreach (self::LABELS as $name => $label) {
-            $fields[] = TextInput::make($name)->label($label)->required(in_array($name, array_slice(Document::FIELDS, 0, 5), true))
-                ->maxLength(match ($name) {
-                    'supplier' => 255, 'invoice_number' => 120, 'currency' => 3, 'iban' => 34, default => 32
-                })
-                ->live(onBlur: true)
+            $component = $name === 'invoice_date'
+                ? DatePicker::make($name)->displayFormat('d.m.Y')->weekStartsOnMonday()->closeOnDateSelection()
+                : TextInput::make($name)
+                    ->maxLength(match ($name) {
+                        'supplier' => 255, 'invoice_number' => 120, 'currency' => 3, 'iban' => 34, default => 32
+                    })
+                    ->live(onBlur: true);
+            $fields[] = $component->label($label)->required(in_array($name, array_slice(Document::FIELDS, 0, 5), true))
                 ->hint(fn (Get $get, ?Document $record): string => self::assessment($name, $get, $record)['label'])
                 ->hintColor(fn (Get $get, ?Document $record): string => self::assessment($name, $get, $record)['color'])
                 ->helperText(function (Get $get, ?Document $record) use ($name): string {

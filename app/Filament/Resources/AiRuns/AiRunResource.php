@@ -6,10 +6,12 @@ use App\Enums\RunStatus;
 use App\Filament\Resources\AiRuns\Pages\ListAiRuns;
 use App\Filament\Resources\AiRuns\Pages\ViewAiRun;
 use App\Models\AiRun;
+use BackedEnum;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
+use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -21,6 +23,12 @@ class AiRunResource extends Resource
     protected static ?string $modelLabel = 'KI-Lauf';
 
     protected static ?string $pluralModelLabel = 'KI-Läufe';
+
+    protected static ?string $recordTitleAttribute = 'id';
+
+    protected static ?int $navigationSort = 2;
+
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::CpuChip;
 
     public static function table(Table $table): Table
     {
