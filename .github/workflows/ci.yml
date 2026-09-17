@@ -27,7 +27,7 @@ jobs:
       - name: Build production images
         run: docker compose build app web
       - name: Interruption, persistence, fresh production start and restore
-        run: python3 tests/operations/lifecycle.py
+        run: php tests/operations/lifecycle.php
       - name: Browser evidence
         if: failure()
         uses: actions/upload-artifact@v4

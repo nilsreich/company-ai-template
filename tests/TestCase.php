@@ -2,8 +2,8 @@
 
 namespace Tests;
 
-use App\Actions\UploadDocument;
-use App\Models\Document;
+use App\Actions\UploadTask;
+use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Http\UploadedFile;
@@ -20,17 +20,17 @@ abstract class TestCase extends BaseTestCase
         config(['ai.fake_delay' => 0]);
     }
 
-    protected function upload(User $actor, string $text = 'Rechnung 123'): Document
+    protected function upload(User $actor, string $text = 'Aufgabe 123'): Task
     {
         Storage::fake('private');
         Queue::fake();
 
-        return app(UploadDocument::class)->handle($actor, UploadedFile::fake()->createWithContent('invoice.txt', $text));
+        return app(UploadTask::class)->handle($actor, UploadedFile::fake()->createWithContent('task.txt', $text));
     }
 
-    /** @return array<string, string|null> */
-    protected function fields(): array
+    /** @return array<string, mixed> */
+    protected function taskPayload(): array
     {
-        return ['supplier' => 'Korrigiert GmbH', 'invoice_number' => 'R-123', 'invoice_date' => '2026-09-01', 'total_amount' => '99.95', 'currency' => 'EUR', 'net_amount' => '83.99', 'tax_amount' => '15.96', 'iban' => null];
+        return ['summary' => 'Korrigierte Zusammenfassung', 'excerpt' => 'Korrigierter Auszug', 'language' => 'de'];
     }
 }

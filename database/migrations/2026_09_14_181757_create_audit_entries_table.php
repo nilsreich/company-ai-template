@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('audit_entries', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->nullable()->constrained();
-            $table->foreignId('document_id')->nullable()->constrained();
+            $table->foreignId('task_id')->nullable()->constrained();
             $table->string('action');
             $table->jsonb('changes');
             $table->timestampTz('created_at');

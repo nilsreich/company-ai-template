@@ -10,7 +10,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('audit_entries', function (Blueprint $table): void {
-            $table->string('log_name')->default('documents')->index();
+            $table->string('log_name')->default('tasks')->index();
             $table->text('description')->nullable();
             $table->nullableMorphs('subject');
             $table->nullableMorphs('causer');
@@ -23,7 +23,7 @@ return new class extends Migration
             $table->string('entry_hash', 64)->nullable();
         });
         DB::statement('LOCK TABLE audit_entries IN ACCESS EXCLUSIVE MODE');
-        DB::statement("UPDATE audit_entries SET description = action, event = action, properties = changes || '{\"legacy_import\":true}'::jsonb, subject_id = document_id, subject_type = CASE WHEN document_id IS NOT NULL THEN 'App\\Models\\Document' END, causer_id = user_id, causer_type = CASE WHEN user_id IS NOT NULL THEN 'App\\Models\\User' END, updated_at = created_at");
+        DB::statement("UPDATE audit_entries SET description = action, event = action, properties = changes || '{\"legacy_import\":true}'::jsonb, subject_id = task_id, subject_type = CASE WHEN task_id IS NOT NULL THEN 'App\\Models\\Task' END, causer_id = user_id, causer_type = CASE WHEN user_id IS NOT NULL THEN 'App\\Models\\User' END, updated_at = created_at");
         DB::unprepared(<<<'SQL'
 CREATE OR REPLACE FUNCTION audit_entry_digest(item audit_entries) RETURNS text
 LANGUAGE sql IMMUTABLE SET timezone = 'UTC' AS $$

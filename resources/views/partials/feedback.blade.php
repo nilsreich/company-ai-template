@@ -17,7 +17,7 @@
                     <label for="feedback-page">Bereich</label>
                     <select id="feedback-page" name="page">
                         @foreach(app(\App\Actions\SubmitFeedback::class)->pages() as $value => $label)
-                            <option value="{{ $value }}" @selected($value === (request()->is('admin/documents*') ? 'documents' : (request()->is('admin/ai-runs*') ? 'ai-runs' : (request()->is('admin/users*') ? 'users' : (request()->is('admin') ? 'dashboard' : 'other')))))>{{ $label }}</option>
+                            <option value="{{ $value }}" @selected($value === (request()->is('admin/tasks*') ? 'tasks' : (request()->is('admin/executions*') ? 'ai-runs' : (request()->is('admin/users*') ? 'users' : (request()->is('admin') ? 'dashboard' : 'other')))))>{{ $label }}</option>
                         @endforeach
                     </select>
                     <section class="feedback-capture" aria-label="Optionaler Screenshot">

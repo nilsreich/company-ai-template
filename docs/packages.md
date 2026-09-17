@@ -1,6 +1,6 @@
 # Paketauswahl für das Template
 
-Stand: 15. September 2026. Maßgeblich sind `composer.json` und `composer.lock`.
+Stand: 16. September 2026. Maßgeblich sind `composer.json` und `composer.lock`.
 
 | Paket | Umsetzung |
 | --- | --- |
@@ -43,7 +43,7 @@ docker compose -f compose.yaml -f compose.dev.yaml run --rm --no-deps -p 127.0.0
 In einem zweiten Terminal mit installiertem Playwright/Chromium:
 
 ```sh
-node tests/operations/telescope.cjs
+npx playwright test telescope
 ```
 
 Auf Alpine `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser` voranstellen. `TELESCOPE_BASE_URL` überschreibt die Testadresse. Die Prüfung meldet sich als Demo-admin und Demo-editor an, prüft Dashboard, JavaScript, interne API und Ablehnung des Editors. Anschließend den temporären Server mit Strg+C stoppen. `--no-reload` ist erforderlich, damit `artisan serve` die übergebenen Umgebungsvariablen an seinen PHP-Unterprozess weiterreicht.

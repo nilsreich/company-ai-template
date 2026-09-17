@@ -6,7 +6,7 @@ use Spatie\Activitylog\Actions\LogActivityAction;
 
 return [
     'enabled' => true,
-    'default_log_name' => 'documents',
+    'default_log_name' => 'tasks',
     'default_auth_driver' => null,
     'include_soft_deleted_subjects' => false,
     'activity_model' => AuditEntry::class,

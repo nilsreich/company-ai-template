@@ -2,10 +2,10 @@
 
 Die ausführliche Gesamtdokumentation besteht aus zwei zusammengehörigen Dokumenten:
 
-1. **[Handbuch: Was das Template ist, warum es so aufgebaut ist und wie es verwendet wird](template-handbuch.md)** – Funktionsumfang, Technologien, Architektur, Datenmodell, Entra, Rollen, Dokumentenablauf, KI-SDK, Queue, Start, Konfiguration, Tests, Kundenanpassung, Deployment, Sicherung und Wartung.
+1. **[Handbuch: Was das Template ist, warum es so aufgebaut ist und wie es verwendet wird](template-handbuch.md)** – Funktionsumfang, Technologien, Architektur, Datenmodell, Entra, Rollen, Aufgabenablauf, KI-SDK, Queue, Start, Konfiguration, Tests, Kundenanpassung, Deployment, Sicherung und Wartung.
 2. **[Technische Analyse und Weiterentwicklungsplan](template-analyse.md)** – Beurteilung der Umsetzung, konkrete Grenzen, Erfüllungsgrad, priorisierte offene Aufgaben, Paketentscheidungen, Erweiterungskriterien und belastbare Aussagen für Kunden.
 
-Beide Dokumente beschreiben den vorhandenen Quellstand vom 15. September 2026. Implementierte Funktionen, nachgewiesene Prüfungen und mögliche Erweiterungen werden ausdrücklich unterschieden.
+Beide Dokumente beschreiben den vorhandenen Quellstand vom 16. September 2026 (Task-Kern; Rechnungsbeispiel in `examples/invoice-extraction`). Implementierte Funktionen, nachgewiesene Prüfungen und mögliche Erweiterungen werden ausdrücklich unterschieden.
 
 | Aufgabe | Passendes Dokument |
 | --- | --- |

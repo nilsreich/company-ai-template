@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
-use App\Ai\DocumentExtractor;
-use App\Ai\FakeDocumentExtractor;
-use App\Ai\OpenAiDocumentExtractor;
+use App\Ai\FakeTaskExtractor;
+use App\Ai\LiveTaskExtractor;
+use App\Ai\LlmProviderFactory;
+use App\Ai\TaskExtractor;
+use App\Ai\ValidateTaskPayload;
+use App\Contracts\ResultValidator;
 use App\Http\Middleware\EnsureActiveUser;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -21,9 +24,10 @@ class AppServiceProvider extends ServiceProvider
             $this->app->register(TelescopeServiceProvider::class);
         }
 
-        $this->app->bind(DocumentExtractor::class, fn () => match (config('ai.driver')) {
-            'fake' => new FakeDocumentExtractor, 'live' => new OpenAiDocumentExtractor, default => throw new \LogicException('AI_DRIVER muss fake oder live sein.'),
+        $this->app->bind(TaskExtractor::class, fn () => match (config('ai.driver')) {
+            'fake' => new FakeTaskExtractor, 'live' => new LiveTaskExtractor, default => throw new \LogicException('AI_DRIVER muss fake oder live sein.'),
         });
+        $this->app->bind(ResultValidator::class, fn () => new (config()->string('ai.validator', ValidateTaskPayload::class)));
     }
 
     public function boot(): void
@@ -32,6 +36,9 @@ class AppServiceProvider extends ServiceProvider
             $event->extendSocialite('microsoft', Provider::class);
         });
         Livewire::addPersistentMiddleware([EnsureActiveUser::class]);
+        if (! in_array(config()->string('ai.live_provider', 'openai'), LlmProviderFactory::PROVIDERS, true)) {
+            throw new \LogicException('AI_LIVE_PROVIDER muss openai, azure oder ollama sein.');
+        }
         if (config()->integer('ai.timeout') < 1 || config()->integer('ai.timeout') >= config()->integer('ai.job_timeout') || config()->integer('ai.job_timeout') >= config()->integer('ai.lease_seconds') || config()->integer('ai.lease_seconds') >= (int) config('queue.connections.database.retry_after')) {
             throw new \LogicException('Erforderlich: 0 < AI_TIMEOUT < Job-Timeout < Lease < retry_after.');
         }

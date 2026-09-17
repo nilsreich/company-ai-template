@@ -1,5 +1,13 @@
 # Prüfbericht
 
+## Ergänzung: Task-Kern, Driver und Runtime am 16. September 2026
+
+- Domäne entkernt (Breaking Rename, nur frische Installationen): `tasks`/`executions`/`task_chunks` mit generischem JSON-Payload statt Rechnungsmodell; Rechnungslogik (Agent, Validator, Rechenprüfung, CSV, Golden-Datensatz, `ai:eval`, Feldmasken) als Beispielmodul in `examples/invoice-extraction` mit Verdrahtungs-README und eigenem Feature-Test.
+- KI-Gateway: `LlmDriver`-Interface mit `OpenAiDriver`, `AzureOpenAiDriver`, `OllamaDriver` (`AI_LIVE_PROVIDER`); Kern-Seams `TaskAgent` und `ResultValidator` per `ai.agent`/`ai.validator`. Nur OpenAI per HTTP-Fixtures geprüft; Azure/Ollama ohne echten Aufruf.
+- Runtime homogenisiert: `tests/operations/lifecycle.php` (Host-PHP, Syntax geprüft), `tests/e2e/telescope.spec.ts` und `tests/e2e/feedback.spec.ts`; Python- und CommonJS-Skripte entfernt. Playwright-Listung: 5 Specs in 3 Dateien.
+- `./bin/dev check`-äquivalent bestanden: Pint sauber; PHPStan/Larastan Level 8 ohne Fehler (Analyse mit `memory_limit=1G`, sonst unveränderte `bin/analyse`-Regeln); PHPUnit **103 Tests, 444 Assertions**; Dev-DB frisch migriert und geseedet. `route:list` zeigt `/tasks/…` und `/admin/tasks`.
+- Nicht erneut ausgeführt: Worker-SIGKILL-Restore (`lifecycle.php` unterbricht den lokalen Stack), Browser-E2E gegen Demo, echte Anbieteraufrufe.
+
 ## Ergänzung: Filament-Runde 2 und Reset-Feld-Test am 16. September 2026
 
 - Sieben unreferenzierte Generator-Stubs (leere Tabellen-/Formular-Klassen, unregistrierte KI-Lauf-Seiten) entfernt; Navigation mit Icons und Sortierung, echte Datensatztitel, benannter Upload-Button, durchsuchbare Revisionsauswahl, Reset-Erfolgsmeldung und Rollenfarben ergänzt. Rechnungsdatum als Kalender mit deutschem Anzeigeformat (Speicherformat `Y-m-d` unverändert).
@@ -18,7 +26,7 @@
 - Docker-Migration und Asset-Build erfolgreich, App/Web/DB/Worker gesund. NPM- und Composer-Audit ohne gemeldete Sicherheitslücken. Pint (110 Dateien) und PHPStan/Larastan erfolgreich. Gesamte PHPUnit-Suite: **91 Tests, 392 Assertions**, davon elf Feedback-Tests.
 - Feedback-Tests prüfen unter anderem Produktionssperre, aktuelle Benutzerberechtigungen, Pflichtfreigabe, PNG-Validierung, ausschließlich private GitHub-Repositories, gesperrte Redirects, serverseitige Metadaten, unveröffentlichte Providerfehler und keine erneute Issue-Erstellung bei derselben UUID oder unklarem Timeout-Ergebnis.
 - Browser auf der HTTP-LAN-Adresse: eigener Button und Formular sichtbar, native Aufnahme deaktiviert mit HTTPS-/localhost-Hinweis, keine JavaScript-Fehler. Marker.io wird nicht mehr geladen.
-- `tests/operations/feedback.cjs`: echte native Tab-Aufnahme mit Chromium über temporäre Loopback-Weiterleitung; alle Tracks nach einem Bild beendet. Schwärzung und mobile Darstellung geprüft. Kein Feedback-Upload vor dem ausdrücklichen Absenden. Die automatische Auswahl des Tabs gilt ausschließlich im Testbrowser.
+- `tests/e2e/feedback.spec.ts`: echte native Tab-Aufnahme mit Chromium über temporäre Loopback-Weiterleitung; alle Tracks nach einem Bild beendet. Schwärzung und mobile Darstellung geprüft. Kein Feedback-Upload vor dem ausdrücklichen Absenden. Die automatische Auswahl des Tabs gilt ausschließlich im Testbrowser.
 - Live-Test mit `LIVE_GITHUB_FEEDBACK_TEST=1`: [markiertes Test-Issue #1](https://github.com/nilsreich/company-ai-feedback/issues/1) im neu angelegten privaten Repository erstellt. Screenshot nur im privaten Upload-Volume; GitHub erhält lediglich einen geschützten Link. Admin-Download entspricht bytegenau dem geschwärzten PNG. Editor erhält 403, Gast wird zur Anmeldung umgeleitet. Kein Kundeninhalt verwendet.
 - Kein HTTPS für die LAN-Demo eingerichtet. Die normale Browser-Berechtigungsauswahl durch einen Menschen wurde nicht automatisiert getestet; der Testbrowser verwendet die automatische Tab-Auswahl. Screenshots/Feedback haben noch keine automatische Aufbewahrungsbegrenzung. Konfiguration und Fehlerbehandlung siehe [README](../README.md#feedback-im-prototyp).
 
@@ -34,7 +42,7 @@ Stand: 15. September 2026. Alle Ausführungen waren lokal; es gab kein externes 
 | Playwright mit System-Chromium | Zwei Browsertests bestanden: kompletter Ablauf mit echtem Datenbank-Worker, Korrektur, Freigabe, CSV sowie negative Zugriffsprüfungen |
 | Produktionsimage-Build | App und Web erfolgreich gebaut; PHP 8.5.10 und PostgreSQL 18.6 verwendet |
 | Containerkonfiguration | Compose- und Nginx-Konfiguration gültig; App, DB, Web und Worker mit Healthchecks |
-| `python3 tests/operations/lifecycle.py` | Worker während Fake-Aufruf mit SIGKILL beendet; nach echter 120-Sekunden-Reservierung erfolgreich, zwei Versuche und genau eine Ergebnisübernahme |
+| `php tests/operations/lifecycle.php` | Worker während Fake-Aufruf mit SIGKILL beendet; nach echter 120-Sekunden-Reservierung erfolgreich, zwei Versuche und genau eine Ergebnisübernahme |
 | Persistenz und frischer Produktionsstart | Daten und Upload nach Neustart erhalten; Migrationen in leerer separater PostgreSQL-Installation; keine Demo-Seeds und keine Devlogin-Route trotz aktivierter Variable |
 | Backup und Restore | Dump und private Dateien in isolierten Produktionscontainern wiederhergestellt; SHA-256 und Dokumentstatus stimmen überein; `bin/backup` separat erfolgreich und Archiv-Prüfsummen gültig |
 | Laravel Boost | MCP-`initialize` über Docker erfolgreich; Produktion enthält weder Boost noch PHPUnit noch Node oder Analyse-Caches; Prozessbenutzer `www-data` |
@@ -45,10 +53,10 @@ Stand: 15. September 2026. Alle Ausführungen waren lokal; es gab kein externes 
 - HTTP-Fixtures durchlaufen den echten SDK-Provider und das strikte Schema. Timeout, Transportoptionen, 429/5xx, Verweigerung, ungültige Daten, Fehlerbereinigung und genau ein HTTP-Aufruf pro Versuch geprüft. Datenbank-Lauf mit SDK: Rate Limit, verzögerte Wiederholung, ein Ergebnis und Tokenverbrauch erfolgreich geprüft. Kein echter Anbieteraufruf.
 - Telescope: lokale Migration ausgeführt, Adminzugriff und interne API geprüft, Editor/Reviewer abgelehnt; Rollenentzug und Deaktivierung bestehender Sitzung wirksam. Gespeicherte Einträge enthalten keine vertraulichen Testinhalte. Produktionsregistrierung trotz gesetztem Schalter ausgeschlossen. `telescope:prune --hours=24` und lokaler Schedule-Eintrag geprüft.
 - Beide regulären Playwright-Tests über `http://192.168.178.200:8080` erneut bestanden. Die Loginseite und `/up` liefern über diese LAN-Adresse HTTP 200. Zugriff von einem anderen physischen Gerät wurde nicht ausgeführt. Die Adresse ist nur die lokale Demo-Konfiguration; das Template bleibt standardmäßig an Loopback gebunden.
-- Separater Telescope-Browsertest: Admin-Dashboard, JavaScript-Initialisierung und Requests-API erfolgreich, Editor erhält 403. Wiederholbar mit `tests/operations/telescope.cjs` und den Befehlen in `packages.md`; der temporäre Server wird danach entfernt.
+- Separater Telescope-Browsertest: Admin-Dashboard, JavaScript-Initialisierung und Requests-API erfolgreich, Editor erhält 403. Wiederholbar mit `npx playwright test telescope` und den Befehlen in `packages.md`; der temporäre Server wird danach entfernt.
 - App- und Web-Produktionsimage nach der Paketänderung erfolgreich gebaut. Separates Compose-Projekt `company-ai-package-check` mit leerer PostgreSQL-Datenbank gestartet, migriert und per HTTP geprüft. AI SDK vorhanden; Telescope, Boost und PHPUnit fehlen. Keine Demo-Benutzer, Telescope- oder Conversation-Tabellen. Keine Devlogin-/Telescope-Routen trotz beider aktivierter Variablen. Anschließend ausschließlich dieses Prüfprojekt mit seinen Volumes entfernt.
 
-Die oben dokumentierten vollständigen Worker-Abbruch-, Persistenz- und Restore-Prüfungen stammen aus dem vorherigen Implementierungsstand. Sie wurden nach dieser Paketergänzung nicht erneut gegen die inzwischen im LAN genutzte Demo ausgeführt. Die automatisierten Jobtests und der separate frische Produktionsstart wurden erneut ausgeführt. `tests/operations/lifecycle.py` prüft in CI zusätzlich die Telescope-Sperre und unterstützt die LAN-Zieladresse über `E2E_BASE_URL`; die geänderte Python-Datei wurde lokal auf Syntax geprüft.
+Die oben dokumentierten vollständigen Worker-Abbruch-, Persistenz- und Restore-Prüfungen stammen aus dem vorherigen Implementierungsstand. Sie wurden nach dieser Paketergänzung nicht erneut gegen die inzwischen im LAN genutzte Demo ausgeführt. Die automatisierten Jobtests und der separate frische Produktionsstart wurden erneut ausgeführt. `tests/operations/lifecycle.php` prüft in CI zusätzlich die Telescope-Sperre und unterstützt die LAN-Zieladresse über `E2E_BASE_URL`; die portierte PHP-Datei wurde lokal auf Syntax geprüft.
 
 Die PHP-Tests decken Rollen, direkte Aktionen, gesperrten Produktions-Devlogin, deaktivierte Sitzungen, private Downloads, Export, signierte OAuth-Fixtures, ungültige KI-Ausgaben, Job-Wiederholungen, doppelte Ausführung, Versionskonflikte und Schreibschutz nach Freigabe ab. Fehler im Formular werden am betroffenen Feld angezeigt. Die produktive Datenbank wird von PHPUnit nicht verwendet; die Suite setzt ausschließlich `company_ai_test` zurück.
 
@@ -67,7 +75,7 @@ Quellen: [PHP 8.5.10](https://www.php.net/ChangeLog-8.php#8.5.10), [PHPStan Turb
 ## Noch separat abzunehmen
 
 - Echter Entra-Testmandant: Tenant-/Client-ID, Secret, Redirect-URI, Zuweisung, Zustimmung, Conditional Access und Rotation fehlen. Anleitung in `entra.md`.
-- Echter OpenAI-Aufruf: API-Schlüssel, Modellzugriff und kundenbezogene Qualitäts-/Kostenabnahme fehlen. Reguläre Tests verwenden ausschließlich Fake bzw. HTTP-Fixtures.
+- Echter Anbieteraufruf je eingesetztem Driver: API-Schlüssel, Modellzugriff und kundenbezogene Qualitäts-/Kostenabnahme fehlen. Reguläre Tests verwenden ausschließlich Fake bzw. HTTP-Fixtures (nur OpenAI-Weg).
 - Öffentlicher HTTPS-Abschluss und echter OAuth-Callback: Domain, Zertifikat und vertrauenswürdige Proxyadressen kundenseitig einrichten.
 - CI ist implementiert; die GitHub-Actions-Ausführung auf einem Remote-Runner wurde nicht ausgelöst.
 - Kein Lasttest mit 400 gleichzeitigen Requests, kein externer Penetrationstest und kein vollständiger Container-CVE-Scan. 400 Konten sind keine Gleichzeitigkeitsanforderung. Composer/NPM-Audits ersetzen diese Prüfungen nicht.

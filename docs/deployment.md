@@ -50,7 +50,7 @@ Minütlichen Host-Cron unter einem eingeschränkten Betriebskonto einrichten:
 * * * * * cd /srv/company-ai && docker compose exec -T worker php artisan ai:recover >> /var/log/company-ai-recovery.log 2>&1
 ```
 
-`ai:recover` besitzt einen Datenbank-Cache-Lock. Der Worker führt es auch beim Start aus. Queue-Reservierungen laufen nach 120 Sekunden ab, verwaiste Dispatch-Absichten werden nach 180 Sekunden erneut zugestellt. Healthchecks prüfen PostgreSQL, FPM-Ping, Web-Startfähigkeit sowie Worker-Prozess/DB/privates Verzeichnis. Compose startet beendete Prozesse neu; `unhealthy` allein bewirkt keinen automatischen Neustart. Healthzustände, Queue-Alter und fehlgeschlagene Läufe müssen durch den Kundenbetrieb überwacht werden.
+`ai:recover` besitzt einen Datenbank-Cache-Lock. Der Worker führt es auch beim Start aus. Queue-Reservierungen laufen nach 120 Sekunden ab, verwaiste Dispatch-Absichten werden nach 180 Sekunden erneut zugestellt. Healthchecks prüfen PostgreSQL, FPM-Ping, Web-Startfähigkeit sowie Worker-Prozess/DB/privates Verzeichnis. Compose startet beendete Prozesse neu; `unhealthy` allein bewirkt keinen automatischen Neustart. Healthzustände, Queue-Alter und fehlgeschlagene Ausführungen müssen durch den Kundenbetrieb überwacht werden.
 
 ```sh
 docker compose ps
@@ -59,7 +59,7 @@ docker compose exec -T app php artisan queue:failed
 docker compose exec -T app php artisan app:health
 ```
 
-Fachliche Wiederholung fehlgeschlagener Läufe erfolgt autorisiert über Filament. Keine massenhafte unkontrollierte Wiederholung via `queue:retry all`. Keine Rohdokumente oder API-Antworten zum Debuggen in Standardlogs schreiben.
+Fachliche Wiederholung fehlgeschlagener Ausführungen erfolgt autorisiert über Filament. Keine massenhafte unkontrollierte Wiederholung via `queue:retry all`. Keine Rohdokumente oder API-Antworten zum Debuggen in Standardlogs schreiben.
 
 ## Geordnetes Deployment
 
@@ -110,4 +110,4 @@ docker compose run --rm app php artisan migrate --force
 docker compose up -d --no-build app worker web
 ```
 
-Nach Wiederherstellung Dokumentanzahl, Stichproben, Datei-Prüfsummen, Rollen und Queuezustände prüfen. Vorhandene `running`-/`queued`-Läufe werden über Reservierungsablauf und Recovery behandelt. Produktive Wiederherstellung überschreibt Daten und ist ein gesonderter Betriebsvorgang; dieses Projekt führt sie nicht automatisch durch.
+Nach Wiederherstellung Aufgabenanzahl, Stichproben, Datei-Prüfsummen, Rollen und Queuezustände prüfen. Vorhandene `running`-/`queued`-Ausführungen werden über Reservierungsablauf und Recovery behandelt. Produktive Wiederherstellung überschreibt Daten und ist ein gesonderter Betriebsvorgang; dieses Projekt führt sie nicht automatisch durch.

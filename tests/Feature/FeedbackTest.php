@@ -29,7 +29,7 @@ class FeedbackTest extends TestCase
     /** @return array<string, mixed> */
     private function payload(): array
     {
-        return ['request_id' => (string) Str::uuid(), 'title' => 'Feedback fixture', 'description' => 'Beschreibung ohne Kundendaten', 'page' => 'documents', 'consent' => '1'];
+        return ['request_id' => (string) Str::uuid(), 'title' => 'Feedback fixture', 'description' => 'Beschreibung ohne Kundendaten', 'page' => 'tasks', 'consent' => '1'];
     }
 
     private function fakeGitHub(): void

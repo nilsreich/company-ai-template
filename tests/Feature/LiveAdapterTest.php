@@ -2,11 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Ai\Agents\InvoiceExtraction;
-use App\Ai\ExtractionFailure;
-use App\Ai\ExtractionInput;
-use App\Ai\OpenAiDocumentExtractor;
-use App\Ai\ValidateExtraction;
+use App\Ai\Agents\GeneralTaskAgent;
+use App\Ai\LiveTaskExtractor;
+use App\Ai\TaskFailure;
+use App\Ai\TaskInput;
+use App\Ai\ValidateTaskPayload;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Http;
@@ -17,17 +17,23 @@ use Tests\TestCase;
 
 class LiveAdapterTest extends TestCase
 {
+    /** @return array<string, mixed> */
+    private function agentFields(): array
+    {
+        return [...$this->taskPayload(), 'confidence' => ['summary' => 0.9, 'excerpt' => 0.8, 'language' => 1.0]];
+    }
+
     public function test_live_adapter_requests_schema_without_tools_and_validates_usage(): void
     {
         config(['ai.key' => 'fixture-only']);
         $sdkInvocations = 0;
         Event::listen(PromptingAgent::class, function (PromptingAgent $event) use (&$sdkInvocations): void {
-            $this->assertInstanceOf(InvoiceExtraction::class, $event->prompt->agent);
+            $this->assertInstanceOf(GeneralTaskAgent::class, $event->prompt->agent);
             $sdkInvocations++;
         });
-        Http::fake(['https://api.openai.com/v1/responses' => Http::response(['status' => 'completed', 'output' => [['content' => [['type' => 'output_text', 'text' => json_encode($this->fields())]]]], 'usage' => ['input_tokens' => 5, 'output_tokens' => 10]])]);
-        $result = app(OpenAiDocumentExtractor::class)->extract(new ExtractionInput('Untrusted text', 1, 'fixture-model', 'invoice-v1'));
-        $this->assertSame($this->fields(), $result->fields);
+        Http::fake(['https://api.openai.com/v1/responses' => Http::response(['status' => 'completed', 'output' => [['content' => [['type' => 'output_text', 'text' => json_encode($this->agentFields())]]]], 'usage' => ['input_tokens' => 5, 'output_tokens' => 10]])]);
+        $result = app(LiveTaskExtractor::class)->extract(new TaskInput('Untrusted text', 1, 'fixture-model', 'task-v1'));
+        $this->assertSame($this->taskPayload(), $result->payload);
         $this->assertSame(5, $result->usage['input_tokens']);
         Http::assertSent(fn ($request) => $request['model'] === 'fixture-model' && $request['store'] === false && ! isset($request['tools']) && $request['text']['format']['strict'] === true);
         Http::assertSentCount(1);
@@ -46,9 +52,9 @@ class LiveAdapterTest extends TestCase
             throw new ConnectionException('fixture-only confidential error');
         });
         try {
-            app(OpenAiDocumentExtractor::class)->extract(new ExtractionInput('text', 1, 'fixture', 'v1'));
+            app(LiveTaskExtractor::class)->extract(new TaskInput('text', 1, 'fixture', 'v1'));
             $this->fail('Expected timeout');
-        } catch (ExtractionFailure $e) {
+        } catch (TaskFailure $e) {
             $this->assertSame('timeout', $e->category);
             $this->assertTrue($e->retryable);
             $this->assertNull($e->getPrevious());
@@ -67,9 +73,9 @@ class LiveAdapterTest extends TestCase
         config(['ai.key' => 'fixture-only']);
         Http::fake(['https://api.openai.com/v1/responses' => Http::response($body, $status)]);
         try {
-            app(OpenAiDocumentExtractor::class)->extract(new ExtractionInput('secret', 1, 'fixture', 'v1'));
+            app(LiveTaskExtractor::class)->extract(new TaskInput('secret', 1, 'fixture', 'v1'));
             $this->fail('Expected failure');
-        } catch (ExtractionFailure $e) {
+        } catch (TaskFailure $e) {
             $this->assertSame($category, $e->category);
             $this->assertStringNotContainsString('secret', $e->getMessage());
             $this->assertNull($e->getPrevious());
@@ -80,7 +86,7 @@ class LiveAdapterTest extends TestCase
 
     public static function invalidFields(): array
     {
-        return [[['supplier' => null]], [['total_amount' => 1.2]], [['total_amount' => '1e9']], [['total_amount' => '1.001']], [['currency' => 'XYZ']], [['invoice_date' => '2026-02-30']], [['invoice_number' => '']], [['unknown' => 'value']]];
+        return [[[[]]], [[['unknown' => ['nested']]]], [[['excerpt' => ['nested']]]]];
     }
 
     #[DataProvider('invalidFields')]
@@ -88,12 +94,12 @@ class LiveAdapterTest extends TestCase
     {
         config(['ai.key' => 'fixture-only']);
         Http::fake(['https://api.openai.com/v1/responses' => Http::response([
-            'status' => 'completed', 'output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode([...$this->fields(), ...$changes])]]]],
+            'status' => 'completed', 'output' => [['type' => 'message', 'content' => [['type' => 'output_text', 'text' => json_encode([...$this->agentFields(), ...$changes])]]]],
         ])]);
         try {
-            app(OpenAiDocumentExtractor::class)->extract(new ExtractionInput('secret', 1, 'fixture', 'v1'));
+            app(LiveTaskExtractor::class)->extract(new TaskInput('secret', 1, 'fixture', 'v1'));
             $this->fail('Invalid SDK response accepted');
-        } catch (ExtractionFailure $e) {
+        } catch (TaskFailure $e) {
             $this->assertSame('invalid_result', $e->category);
             $this->assertFalse($e->retryable);
         }
@@ -104,6 +110,6 @@ class LiveAdapterTest extends TestCase
     public function test_invalid_extracted_fields_are_rejected(array $changes): void
     {
         $this->expectException(ValidationException::class);
-        app(ValidateExtraction::class)->handle([...$this->fields(), ...$changes]);
+        app(ValidateTaskPayload::class)->handle([...$this->taskPayload(), ...$changes]);
     }
 }

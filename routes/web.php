@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FeedbackController;
+use App\Http\Controllers\TaskController;
 use App\Http\Middleware\EnsureActiveUser;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -18,8 +18,8 @@ if (app()->environment(['local', 'testing'])) {
 Route::middleware(['auth', EnsureActiveUser::class])->group(function (): void {
     Route::post('/feedback', [FeedbackController::class, 'store'])->middleware('throttle:5,1')->name('feedback.store');
     Route::get('/feedback/{feedback}/screenshot', [FeedbackController::class, 'screenshot'])->whereUuid('feedback')->name('feedback.screenshot');
-    Route::get('/documents/{document}/preview', [DocumentController::class, 'preview'])->name('documents.preview');
-    Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
-    Route::get('/documents/{document}/export', [DocumentController::class, 'export'])->name('documents.export');
-    Route::get('/documents/{document}/status', [DocumentController::class, 'status'])->name('documents.status');
+    Route::get('/tasks/{task}/preview', [TaskController::class, 'preview'])->name('tasks.preview');
+    Route::get('/tasks/{task}/download', [TaskController::class, 'download'])->name('tasks.download');
+    Route::get('/tasks/{task}/export', [TaskController::class, 'export'])->name('tasks.export');
+    Route::get('/tasks/{task}/status', [TaskController::class, 'status'])->name('tasks.status');
 });

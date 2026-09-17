@@ -108,7 +108,7 @@ final class SubmitFeedback
     /** @return array<string, string> */
     public function pages(): array
     {
-        return ['dashboard' => 'Dashboard', 'documents' => 'Dokumente', 'ai-runs' => 'KI-Läufe', 'users' => 'Benutzerverwaltung', 'other' => 'Andere Seite'];
+        return ['dashboard' => 'Dashboard', 'tasks' => 'Aufgaben', 'executions' => 'KI-Läufe', 'users' => 'Benutzerverwaltung', 'other' => 'Andere Seite'];
     }
 
     private function body(Feedback $feedback): string

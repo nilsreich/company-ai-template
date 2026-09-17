@@ -2,7 +2,7 @@
 
 **Produkt, Architektur, Funktionsweise, Nutzung, Anpassung und Betrieb**
 
-Dokumentationsstand: 15. September 2026. Grundlage sind der vorhandene Quellcode, die Lockfiles, die Containerkonfiguration und die dokumentierten lokalen Prüfungen.
+Dokumentationsstand: 16. September 2026 (entkernter Task-Kern; Rechnungsdomäne in `examples/invoice-extraction`). Grundlage sind der vorhandene Quellcode, die Lockfiles, die Containerkonfiguration und die dokumentierten lokalen Prüfungen.
 
 Dieses Handbuch beschreibt das tatsächlich implementierte Template. Ergänzend bewertet die [technische Analyse](template-analyse.md) dessen Stärken, Grenzen, offene Aufgaben und sinnvolle Weiterentwicklung. Der [Prüfbericht](verification.md) hält fest, welche Nachweise ausgeführt wurden und welche noch fehlen. Aussagen über mögliche Erweiterungen sind keine Zusage, dass diese bereits eingebaut sind.
 
@@ -16,7 +16,7 @@ Dieses Handbuch beschreibt das tatsächlich implementierte Template. Ergänzend 
 6. [Datenmodell und Zustände](#datenmodell)
 7. [Anmeldung und Identität](#anmeldung)
 8. [Rollen und Autorisierung](#rollen)
-9. [Dokumentenablauf im Detail](#dokumentenablauf)
+9. [Aufgabenablauf im Detail](#aufgabenablauf)
 10. [KI-Anbindung und Validierung](#ki)
 11. [Queue, Wiederholung und Nebenläufigkeit](#queue)
 12. [Dateien, Datenschutz und Nachvollziehbarkeit](#daten)
@@ -34,13 +34,13 @@ Dieses Handbuch beschreibt das tatsächlich implementierte Template. Ergänzend 
 <a id="zweck"></a>
 ## 1. Zweck und wirtschaftlicher Nutzen
 
-Das Template ist eine wiederverwendbare Grundlage für firmeninterne KI-Anwendungen. Es verbindet die wiederkehrenden technischen Aufgaben eines Kundenprojekts mit einem vollständig durchlaufbaren Beispiel: Eine Textdatei wird hochgeladen, im Hintergrund ausgewertet, von einem Menschen geprüft und korrigiert, ausdrücklich freigegeben und anschließend als CSV exportiert.
+Das Template ist eine wiederverwendbare Grundlage für firmeninterne KI-Anwendungen. Es verbindet die wiederkehrenden technischen Aufgaben eines Kundenprojekts mit einem vollständig durchlaufbaren Kernablauf: Eine Datei wird hochgeladen, im Hintergrund ausgewertet, von einem Menschen geprüft und korrigiert, ausdrücklich freigegeben und anschließend als JSON exportiert. Die mitgelieferte Rechnungsdomäne (`examples/invoice-extraction`) zeigt, wie ein Fachmodul Agent, Validierung, Masken und Export beisteuert.
 
 Der Nutzen liegt vor allem in der bereits verbundenen Infrastruktur. Ein neues Projekt muss nicht erneut klären, wie Anmeldung und Verwaltungsoberfläche dieselbe Session nutzen, wie Berechtigungen bei direkten Downloads geprüft werden, wie ein Modellaufruf einen Webrequest nicht blockiert oder wie ein verspätetes Ergebnis eine menschliche Korrektur respektiert. Diese Verbindungen sind implementiert und mit automatisierten Tests abgesichert.
 
-Damit verschiebt sich die Arbeit eines Kundenprojekts auf die wirklich unterschiedlichen Fragen: Welche Informationen sollen gewonnen werden? Welche Eingaben sind zulässig? Wer darf welche Ergebnisse sehen und freigeben? Wie gut ist die Extraktion auf den tatsächlichen Kundendokumenten? Welche Betriebs- und Aufbewahrungsanforderungen gelten? Das Template beantwortet die technische Grundstruktur, nimmt diese fachlichen Entscheidungen aber nicht vorweg.
+Damit verschiebt sich die Arbeit eines Kundenprojekts auf die wirklich unterschiedlichen Fragen: Welche Informationen sollen gewonnen werden? Welche Eingaben sind zulässig? Wer darf welche Ergebnisse sehen und freigeben? Wie gut ist die Verarbeitung auf den tatsächlichen Kundendaten? Welche Betriebs- und Aufbewahrungsanforderungen gelten? Das Template beantwortet die technische Grundstruktur, nimmt diese fachlichen Entscheidungen aber nicht vorweg.
 
-Es handelt sich um Quellcode, der für ein Kundenprojekt übernommen und gezielt verändert wird. Es ist kein fertiges Rechnungsverarbeitungssystem, kein frei konfigurierbarer Prozessbaukasten und keine Plattform, auf der bereits mehrere Kunden gemeinsam betrieben werden. Der mitgelieferte Rechnungsfall demonstriert das Zusammenspiel der Komponenten; er definiert nicht die spätere Produktgrenze.
+Es handelt sich um Quellcode, der für ein Kundenprojekt übernommen und gezielt verändert wird. Es ist kein fertiges Rechnungsverarbeitungssystem, kein frei konfigurierbarer Prozessbaukasten und keine Plattform, auf der bereits mehrere Kunden gemeinsam betrieben werden. Der mitgelieferte Rechnungsfall in `examples/invoice-extraction` demonstriert das Zusammenspiel von Kern und Fachmodul; er definiert nicht die spätere Produktgrenze.
 
 Eine konkrete prozentuale Zeit- oder Kostenersparnis wurde nicht gemessen. Belastbar ist die Feststellung, dass die beschriebenen Integrationspunkte vorhanden sind und die Kernabläufe lokal geprüft wurden. Wie stark sich das wirtschaftlich auswirkt, hängt vom Umfang der fachlichen Anpassungen und den Vorgaben des jeweiligen Kunden ab.
 
@@ -49,7 +49,7 @@ Eine konkrete prozentuale Zeit- oder Kostenersparnis wurde nicht gemessen. Belas
 
 Eine Installation gehört genau einer Firma. Vorgesehen sind kleine bis mittelgroße interne Anwendungen mit bis ungefähr 400 Benutzerkonten. Diese Kontenzahl ist eine Größenordnung für die Organisation, keine geprüfte Gleichzeitigkeit und kein zugesicherter Durchsatz.
 
-Besonders gut passt das Template zu Aufgaben, bei denen ein KI-Ergebnis ein bearbeitbarer Vorschlag ist: Dokumentenprüfung, strukturierte Erfassung aus Texten, interne Klassifikation oder vorbereitende Sachbearbeitung. Der Nutzen ist hoch, wenn Benutzer eine bekannte Verwaltungsoberfläche mit Tabellen, Formularen und Freigaben benötigen und eine Hintergrundverarbeitung einige Sekunden dauern darf.
+Besonders gut passt das Template zu Aufgaben, bei denen ein KI-Ergebnis ein bearbeitbarer Vorschlag ist: Aufgabenprüfung, strukturierte Erfassung aus Texten, interne Klassifikation oder vorbereitende Sachbearbeitung. Der Nutzen ist hoch, wenn Benutzer eine bekannte Verwaltungsoberfläche mit Tabellen, Formularen und Freigaben benötigen und eine Hintergrundverarbeitung einige Sekunden dauern darf.
 
 Die Architektur passt weniger gut zu einer öffentlich zugänglichen Verbraucherplattform, einem hochgradig interaktiven Echtzeitprodukt oder einem Dienst mit vertraglich geforderter unterbrechungsfreier Verfügbarkeit. Dafür wären unter anderem andere Lastannahmen, eine erweiterte Betriebsarchitektur und zusätzliche Produktfunktionen erforderlich. Ein Kubernetes-Cluster, mehrere Datenbankreplikate oder ein weiterer Dienst werden deshalb nicht vorsorglich eingebaut.
 
@@ -62,18 +62,18 @@ Die Installation auf einem einzelnen Server ist bewusst überschaubar. Sie begre
 | --- | --- |
 | Anmeldung | Microsoft Entra ID für einen fest konfigurierten Tenant; lokaler Demo-Login mit eigener Umgebungssperre |
 | Benutzer | Lokale Aktivierung und drei feste Rollen; Schutz des letzten aktiven Administrators |
-| Dokumente | Private PDF-/TXT-Uploads (PDF bis 8 MiB, TXT bis 256 KiB), Inhaltsprüfung und SHA-256-Prüfsumme |
-| Hintergrundverarbeitung | Laravel-Datenbank-Queue, eigener Worker, begrenzte Wiederholungen und Wiederaufnahme verwaister Läufe |
-| KI | Deterministischer Fake und echter OpenAI-Adapter über Laravel AI SDK |
-| Prüfung | Originaltext, Ergebnisfelder, manuelle Korrektur, Versionsprüfung und ausdrückliche Freigabe |
-| Export | Einzelnes freigegebenes Dokument als CSV, mit Schutz vor verbreiteten Formelpräfixen |
-| Nachvollziehbarkeit | Ursprüngliches KI-Ergebnis, aktueller Bearbeitungsstand, Laufmetadaten und fachliche Audit-Einträge |
-| Oberfläche | Filament-Ressourcen für Dokumente, KI-Läufe und Benutzerverwaltung |
+| Aufgaben | Private PDF-/TXT-Uploads (PDF bis 8 MiB, TXT bis 256 KiB), Inhaltsprüfung und SHA-256-Prüfsumme |
+| Hintergrundverarbeitung | Laravel-Datenbank-Queue, eigener Worker, begrenzte Wiederholungen und Wiederaufnahme verwaister Ausführungen |
+| KI | Deterministischer Fake und Live-Driver (OpenAI, Azure, Ollama) über Laravel AI SDK |
+| Prüfung | Originaltext, Ergebnis-Payload, manuelle Korrektur, Versionsprüfung und ausdrückliche Freigabe |
+| Export | Einzelne freigegebene Aufgabe als JSON (Fachformate wie CSV liefert das Domain-Modul) |
+| Nachvollziehbarkeit | Ursprüngliches KI-Ergebnis, aktueller Bearbeitungsstand, Ausführungsmetadaten und fachliche Audit-Einträge |
+| Oberfläche | Filament-Ressourcen für Aufgaben, KI-Ausführungen und Benutzerverwaltung |
 | Qualität | Pint, PHPStan/Larastan, PHPUnit, Playwright, Paket-Audits und CI-Konfiguration |
 | Entwicklung | Docker-Entwicklungsbetrieb, Boost und optionales lokales Telescope |
 | Betrieb | Mehrstufige Images, Healthchecks, persistente Volumes sowie dokumentierte Deployment- und Restore-Abläufe |
 
-Die Oberfläche zeigt für Dokumente Dateiname, Lieferant, Rechnungsnummer, Geschäftsstatus und Uploadzeit. Dateiname, Lieferant und Rechnungsnummer sind durchsuchbar; der Geschäftsstatus ist filterbar. Die KI-Laufübersicht zeigt unter anderem Status, Versuche und Fehlerkategorie. In der Laufdetailansicht stehen Modell, Promptversion, Eingaberevisionen, validiertes Ergebnis und verfügbare Tokeninformationen.
+Die Oberfläche zeigt für Aufgaben Titel, Dateiname, Geschäftsstatus und Uploadzeit. Titel, Dateiname und Status sind durchsuchbar bzw. filterbar. Die Ausführungsübersicht zeigt unter anderem Status, Versuche und Fehlerkategorie. In der Ausführungsdetailansicht stehen Modell, Promptversion, Eingaberevisionen, validiertes Ergebnis und verfügbare Tokeninformationen.
 
 „Rollenverwaltung“ bedeutet hier, dass ein Administrator vorhandenen Benutzern eine der drei definierten Rollen zuweist. Es gibt keinen Editor für beliebige Rollen, keine konfigurierbaren Einzelrechte und keine Übernahme von Entra-Gruppen in lokale Berechtigungen.
 
@@ -93,7 +93,7 @@ Die folgende Tabelle beschreibt den geprüften Projektstand. Sie ist keine Behau
 | PostgreSQL | 18.6 im Docker-Basisimage | Geschäftsdaten, Queue, Sessions und Cache |
 | Laravel Socialite | 5.31.0 | OAuth-Ablauf und Session-State |
 | SocialiteProviders/Microsoft | 4.10.0 | Microsoft-Endpunkte, Profilzugriff und ID-Token-Verifikation |
-| Laravel AI SDK | 0.11.2 | Strukturierter OpenAI-Aufruf im Live-Adapter |
+| Laravel AI SDK | 0.11.2 | Strukturierte Aufrufe im Live-Adapter über umschaltbare Driver |
 | Symfony Intl | 8.1.5 | Währungskennungen und Währungspräzision |
 | PHPUnit | 12.5.35 | Automatisierte PHP-Tests |
 | Larastan / PHPStan | 3.12.1 / 2.2.14 | Statische Analyse auf Level 8 |
@@ -135,13 +135,13 @@ flowchart LR
     P --> S[(Private Uploads)]
     Q[Laravel Queue-Worker] --> D
     Q --> S
-    Q --> X[DocumentExtractor]
+    Q --> X[TaskExtractor]
     X --> K[Deterministischer Fake]
-    X --> L[Laravel AI SDK / OpenAI]
+    X --> L[Laravel AI SDK / OpenAI, Azure, Ollama]
     A --> E[Microsoft Entra ID]
 ```
 
-Im Produktionsbetrieb liegt ein HTTPS-Abschluss vor Nginx. Dieser ist eine einzurichtende Betriebsumgebung und kein zusätzlicher Dienst in der mitgelieferten Compose-Datei. Die Browseroberfläche spricht mit Laravel; sie erhält keinen OpenAI-Schlüssel und ruft den Modellanbieter nicht direkt auf.
+Im Produktionsbetrieb liegt ein HTTPS-Abschluss vor Nginx. Dieser ist eine einzurichtende Betriebsumgebung und kein zusätzlicher Dienst in der mitgelieferten Compose-Datei. Die Browseroberfläche spricht mit Laravel; sie erhält keinen Anbieter-Schlüssel und ruft den Modellanbieter nicht direkt auf.
 
 ### 5.2 Die Grenzen im Quellcode
 
@@ -150,22 +150,22 @@ Im Produktionsbetrieb liegt ein HTTPS-Abschluss vor Nginx. Dieser ist eine einzu
 | `app/Filament` | Felder, Tabellen, Dialoge, Darstellung und Delegation | Anbieteraufrufe oder eigenständige Freigabelogik |
 | `app/Actions` | Fachliche Anwendungsfälle und Transaktionsgrenzen | Wiederholte Formulardefinitionen |
 | `app/Policies` | Zentrale Regeln für handelnde Benutzer und Ressourcen | Verlassen auf bloß ausgeblendete Buttons |
-| `app/Ai` | Extraktionsvertrag, Fake, SDK-Adapter und Ergebnisvalidierung | Änderung lokaler Benutzerrollen oder Freigabe von Dokumenten |
+| `app/Ai` | Verarbeitungsvertrag (`TaskExtractor`), Fake, SDK-Driver und Basisvalidierung | Änderung lokaler Benutzerrollen oder Freigabe von Aufgaben |
 | `app/Jobs` | Anschluss an Laravel Queue und technische Wiederholung | Auf menschliche Entscheidungen wartende Prozesse |
 | `app/Auth` | Zusätzliche Prüfung der Entra-Identitätsclaims | Lokale Rollenzuweisung aus externen Profildaten |
 | `app/Models` | Eloquent-Modelle, Beziehungen und Casts | Vollständige Geschäftsprozesse als schwer sichtbare Seiteneffekte |
 | `routes` / Controller | HTTP-Einstieg, Middleware und Antwortformate | Eine zweite, abweichende Variante derselben Geschäftsaktion |
 | `docker`, `compose*.yaml`, `bin` | Laufzeit, Start, Prüfungen und Betrieb | Kundengeheimnisse im Quellcode |
 
-Die zentrale Wirkung dieser Aufteilung ist Prüfbarkeit. `ApproveDocument` kann eine Freigabe unabhängig davon verweigern, ob sie über einen Filament-Dialog oder später über einen anderen autorisierten Einstieg ausgelöst wird. Die Policy und die Transaktion liegen am Anwendungsfall; ein manipuliertes Frontend kann sie nicht durch das Sichtbarmachen eines Buttons ersetzen.
+Die zentrale Wirkung dieser Aufteilung ist Prüfbarkeit. `ApproveTask` kann eine Freigabe unabhängig davon verweigern, ob sie über einen Filament-Dialog oder später über einen anderen autorisierten Einstieg ausgelöst wird. Die Policy und die Transaktion liegen am Anwendungsfall; ein manipuliertes Frontend kann sie nicht durch das Sichtbarmachen eines Buttons ersetzen.
 
 Es gibt keine zusätzlichen Repository-Abstraktionen über Eloquent, keinen selbst erfundenen Event-Bus und kein Pluginsystem. Für die vorhandenen Anwendungsfälle würden sie mehr Übergänge als fachlichen Nutzen erzeugen. Sollte später tatsächlich ein zweites Speichersystem oder ein fachliches Ereignismodell erforderlich sein, kann dafür eine konkrete Grenze ergänzt werden.
 
 ### 5.3 Wichtige Anwendungsklassen
 
-`UploadDocument` validiert und speichert das Original (PDF oder TXT) und legt den ersten Lauf an. `StartExtraction` autorisiert eine Verarbeitung und erzeugt eine dauerhafte Laufabsicht. `ProcessExtraction` übernimmt die Beanspruchung, den Aufruf und die kontrollierte Ergebnisübernahme. `CorrectDocument` validiert menschliche Änderungen und prüft die Bearbeitungsrevision. `ResetDocumentField` stellt einen einzelnen KI-Ursprungswert wieder her. `RestoreDocumentRevision` übernimmt einen früheren Auditstand als neue Revision. `ApproveDocument` führt die gesonderte Freigabe durch. `ExportDocument` autorisiert die CSV-Erzeugung. `SubmitGoldenDataset` sichert einen freigegebenen Stand als interne Evaluierungs-Fixture. `RejectAuditCleanup` verweigert die Löschung von Audit-Einträgen. `UpdateUserAccess` verwaltet Aktivierung und Rollen einschließlich des letzten Administrators.
+`UploadTask` validiert und speichert das Original (PDF oder TXT) und legt die erste Ausführung an. `StartExecution` autorisiert eine Verarbeitung und erzeugt eine dauerhafte Ausführungsabsicht. `ProcessExecution` übernimmt die Beanspruchung, den Aufruf und die kontrollierte Ergebnisübernahme. `CorrectTask` validiert menschliche Änderungen und prüft die Bearbeitungsrevision. `ResetTaskField` stellt einen einzelnen KI-Ursprungswert wieder her. `RestoreTaskRevision` übernimmt einen früheren Auditstand als neue Revision. `ApproveTask` führt die gesonderte Freigabe durch. `ExportTask` autorisiert die JSON-Erzeugung. Fachspezifisches (Rechnungsregeln, CSV, Golden-Datensatz) liegt im Beispielmodul `examples/invoice-extraction`. `RejectAuditCleanup` verweigert die Löschung von Audit-Einträgen. `UpdateUserAccess` verwaltet Aktivierung und Rollen einschließlich des letzten Administrators.
 
-Bei Änderungen sollte zuerst geklärt werden, welcher dieser Anwendungsfälle betroffen ist. Ein neues Feld im Formular ist häufig auch eine Änderung am Extraktionsvertrag, an der Validierung und am Export. Eine neue Rolle ist eine Änderung an den Policies, nicht lediglich an der Navigation.
+Bei Änderungen sollte zuerst geklärt werden, welcher dieser Anwendungsfälle betroffen ist. Ein neues Ergebnisfeld ist häufig auch eine Änderung am Verarbeitungsvertrag, an der Validierung und am Export. Eine neue Rolle ist eine Änderung an den Policies, nicht lediglich an der Navigation.
 
 <a id="datenmodell"></a>
 ## 6. Datenmodell und Zustände
@@ -175,38 +175,38 @@ Bei Änderungen sollte zuerst geklärt werden, welcher dieser Anwendungsfälle b
 | Tabelle | Wesentlicher Inhalt | Bedeutung |
 | --- | --- | --- |
 | `users` | Anzeigename, E-Mail, Tenant-/Object-ID, Rolle, Aktivierung und Demo-Kennung | Lokales Benutzerkonto mit externer stabiler Identität |
-| `documents` | Privater Dateipfad, MIME-Typ, Originalname, Prüfsumme, Eingabeversion, Bearbeitungsrevision, Geschäftsstatus und aktuelle Ergebnisfelder (acht Felder, siehe Abschnitt 9.3) | Der gegenwärtige fachliche Dokumentstand |
-| `ai_runs` | Dokumentbezug, Eingabestand, Startrevision, Laufstatus, Anbieterkennung, Modell, Promptversion, Versuche, Lease, Ergebnis, Konfidenz und Tokenverbrauch | Geschichte der angeforderten KI-Verarbeitungen |
-| `audit_entries` | Aktion, Benutzer, Dokument, Änderungen und Zeitpunkt | Nachvollziehbarkeit ausgewählter fachlicher Änderungen |
+| `tasks` | Privater Dateipfad, MIME-Typ, Originalname, Prüfsumme, Eingabeversion, Bearbeitungsrevision, Geschäftsstatus und aktueller Ergebnis-Payload (JSON, siehe Abschnitt 9.3) | Der gegenwärtige fachliche Aufgabenstand |
+| `executions` | Aufgabenbezug, Eingabestand, Startrevision, Ausführungsstatus, Anbieterkennung, Modell, Promptversion, Versuche, Lease, Ergebnis, Konfidenz und Tokenverbrauch | Geschichte der angeforderten KI-Ausführungen |
+| `audit_entries` | Aktion, Benutzer, Aufgabe, Änderungen und Zeitpunkt | Nachvollziehbarkeit ausgewählter fachlicher Änderungen |
 
-Daneben bestehen technische Tabellen unter anderem für Jobs, fehlgeschlagene Queue-Jobs, Sessions und den Datenbank-Cache. Die generierte Queue-Grundstruktur kann auch Tabellen enthalten, deren Framework-Funktion im Demoablauf nicht verwendet wird. Telescope ergänzt seine Tabellen ausschließlich über die lokale Migration. Für den Dokumentenfall werden keine SDK-Conversation-Tabellen angelegt.
+Daneben bestehen technische Tabellen unter anderem für Jobs, fehlgeschlagene Queue-Jobs, Sessions und den Datenbank-Cache. Die generierte Queue-Grundstruktur kann auch Tabellen enthalten, deren Framework-Funktion im Demoablauf nicht verwendet wird. Telescope ergänzt seine Tabellen ausschließlich über die lokale Migration. Für den Aufgabenfall werden keine SDK-Conversation-Tabellen angelegt.
 
 ### 6.2 Drei verschiedene Begriffe von „Version“
 
-`input_version` bezeichnet die Version des zu verarbeitenden Eingabedokuments. Sie beginnt bei 1. Eine Oberfläche zum Ersetzen eines Originals und Hochzählen dieser Version ist noch nicht implementiert; die Prüfung auf unterschiedliche Eingabeversionen ist bereits vorhanden.
+`input_version` bezeichnet die Version der zu verarbeitenden Eingabedatei. Sie beginnt bei 1. Eine Oberfläche zum Ersetzen eines Originals und Hochzählen dieser Version ist noch nicht implementiert; die Prüfung auf unterschiedliche Eingabeversionen ist bereits vorhanden.
 
-`revision` bezeichnet den Bearbeitungsstand des Dokuments. KI-Übernahme, Korrektur und Freigabe können ihn erhöhen. Wer eine Änderung absendet, muss sich auf den noch gültigen Stand beziehen. Das schützt gegen das Überschreiben einer inzwischen veränderten Fassung.
+`revision` bezeichnet den Bearbeitungsstand der Aufgabe. KI-Übernahme, Korrektur und Freigabe können ihn erhöhen. Wer eine Änderung absendet, muss sich auf den noch gültigen Stand beziehen. Das schützt gegen das Überschreiben einer inzwischen veränderten Fassung.
 
-`prompt_version` bezeichnet die deklarierte Version des Extraktionsprompts. Sie dokumentiert, unter welcher Kennzeichnung der Lauf angelegt wurde. Sie ist derzeit keine vollständige Archivierung des damaligen Promptcodes. Welche Konsequenz das für spätere Promptänderungen hat, erläutert die [Analyse](template-analyse.md).
+`prompt_version` bezeichnet die deklarierte Version des Verarbeitungsprompts. Sie dokumentiert, unter welcher Kennzeichnung die Ausführung angelegt wurde. Sie ist derzeit keine vollständige Archivierung des damaligen Promptcodes. Welche Konsequenz das für spätere Promptänderungen hat, erläutert die [Analyse](template-analyse.md).
 
 ### 6.3 Geschäftsstatus und Verarbeitungsstatus
 
-| Dokumentstatus | Bedeutung | Typischer Übergang |
+| Aufgabenstatus | Bedeutung | Typischer Übergang |
 | --- | --- | --- |
 | `draft` | Noch kein vollständiger prüfbereiter Ergebnisstand | Nach Upload |
 | `in_review` | Ergebnis liegt zur menschlichen Prüfung vor | Nach gültiger KI-Übernahme oder vollständiger manueller Korrektur |
-| `approved` | Ein berechtigter Benutzer hat ausdrücklich freigegeben | Durch `ApproveDocument` |
+| `approved` | Ein berechtigter Benutzer hat ausdrücklich freigegeben | Durch `ApproveTask` |
 
-| Laufstatus | Bedeutung |
+| Ausführungsstatus | Bedeutung |
 | --- | --- |
-| `queued` | Lauf wartet auf Verarbeitung oder einen begrenzten weiteren Versuch |
-| `running` | Ein Worker hat den Lauf zeitlich begrenzt beansprucht |
+| `queued` | Ausführung wartet auf Verarbeitung oder einen begrenzten weiteren Versuch |
+| `running` | Ein Worker hat die Ausführung zeitlich begrenzt beansprucht |
 | `succeeded` | Ein gültiges Ergebnis wurde gewonnen; die Übernahme kann trotzdem verhindert worden sein |
-| `failed` | Der Lauf ist beendet und benötigt Prüfung oder einen autorisierten Neustart |
+| `failed` | Die Ausführung ist beendet und benötigt Prüfung oder einen autorisierten Neustart |
 
-Ein Lauf kann `succeeded` sein, während `applied=false` bleibt. Das ist beispielsweise richtig, wenn zwischenzeitlich ein Mensch korrigiert hat. Der KI-Vorschlag bleibt als Laufresultat sichtbar, verändert aber den aktuellen Dokumentstand nicht. Die Fehlerkategorie `superseded` bezeichnet in diesem Fall die überholte Ergebnisübernahme und keinen fehlgeschlagenen Modellaufruf.
+Eine Ausführung kann `succeeded` sein, während `applied=false` bleibt. Das ist beispielsweise richtig, wenn zwischenzeitlich ein Mensch korrigiert hat. Der KI-Vorschlag bleibt als Ausführungsergebnis sichtbar, verändert aber den aktuellen Aufgabenstand nicht. Die Fehlerkategorie `superseded` bezeichnet in diesem Fall die überholte Ergebnisübernahme und keinen fehlgeschlagenen Modellaufruf.
 
-Freigegebene Dokumente sind in den implementierten Anwendungsfällen schreibgeschützt. Es gibt kein Wiederöffnen und keine Löschfunktion. Das ist eine Anwendungsregel; privilegierter direkter Datenbankzugriff wird damit nicht technisch unmöglich.
+Freigegebene Aufgaben sind in den implementierten Anwendungsfällen schreibgeschützt. Es gibt kein Wiederöffnen und keine Löschfunktion. Das ist eine Anwendungsregel; privilegierter direkter Datenbankzugriff wird damit nicht technisch unmöglich.
 
 <a id="anmeldung"></a>
 ## 7. Anmeldung und Identität
@@ -254,81 +254,79 @@ Alle Angaben setzen ein aktives Konto voraus.
 
 | Aktion | editor | reviewer | admin | Zusätzliche Bedingung |
 | --- | --- | --- | --- | --- |
-| Dokumente und KI-Läufe ansehen | Ja | Ja | Ja | Alle Dokumente dieser Installation |
+| Aufgaben und KI-Ausführungen ansehen | Ja | Ja | Ja | Alle Aufgaben dieser Installation |
 | PDF-/TXT-Datei hochladen | Ja | Ja | Ja | Zulässige Datei (PDF bis 8 MiB, TXT bis 256 KiB) |
-| Original herunterladen | Ja | Ja | Ja | Autorisierter Dokumentzugriff |
-| Ergebnis korrigieren | Ja | Ja | Ja | Dokument noch nicht freigegeben |
-| Fehlgeschlagene Verarbeitung neu anfordern | Ja | Ja | Ja | Letzter Lauf fehlgeschlagen, Dokument nicht freigegeben, kein aktiver Lauf |
-| Dokument freigeben | Nein | Ja | Ja | `in_review`, gültige Daten, passende Revision |
-| CSV exportieren | Nein | Ja | Ja | `approved` |
+| Original herunterladen | Ja | Ja | Ja | Autorisierter Aufgabenzugriff |
+| Ergebnis korrigieren | Ja | Ja | Ja | Aufgabe noch nicht freigegeben |
+| Fehlgeschlagene Verarbeitung neu anfordern | Ja | Ja | Ja | Letzte Ausführung fehlgeschlagen, Aufgabe nicht freigegeben, keine aktive Ausführung |
+| Aufgabe freigeben | Nein | Ja | Ja | `in_review`, gültiger Payload, passende Revision |
+| JSON exportieren | Nein | Ja | Ja | `approved` |
 | Benutzer und Rollen verwalten | Nein | Nein | Ja | Letzter aktiver Administrator muss erhalten bleiben |
 | Telescope aufrufen | Nein | Nein | Ja | Nur lokal und ausdrücklich aktiviert |
 
-Der Begriff reviewer beinhaltet damit die editor-Rechte; admin beinhaltet die reviewer-Rechte. Es gibt keinen Vier-Augen-Zwang: Ein reviewer oder admin darf auch ein eigenes Dokument freigeben. Es gibt ebenfalls keine Abteilungs- oder Eigentümergrenze. Diese Annahmen müssen bei jedem Kunden bewusst bestätigt oder geändert werden.
+Der Begriff reviewer beinhaltet damit die editor-Rechte; admin beinhaltet die reviewer-Rechte. Es gibt keinen Vier-Augen-Zwang: Ein reviewer oder admin darf auch eine eigene Aufgabe freigeben. Es gibt ebenfalls keine Abteilungs- oder Eigentümergrenze. Diese Annahmen müssen bei jedem Kunden bewusst bestätigt oder geändert werden.
 
 ### 8.2 Wo die Regeln durchgesetzt werden
 
-Die Policies laden den Benutzer erneut und verweigern inaktive Konten. Die Middleware `EnsureActiveUser` aktualisiert ebenfalls den Benutzer und beendet eine Sitzung bei Deaktivierung. Filament wendet die Authentifizierungsmiddleware persistent auf seine Interaktionen an; zusätzliche Dokumentrouten benutzen dieselbe aktive Benutzerprüfung.
+Die Policies laden den Benutzer erneut und verweigern inaktive Konten. Die Middleware `EnsureActiveUser` aktualisiert ebenfalls den Benutzer und beendet eine Sitzung bei Deaktivierung. Filament wendet die Authentifizierungsmiddleware persistent auf seine Interaktionen an; zusätzliche Aufgabenrouten benutzen dieselbe aktive Benutzerprüfung.
 
 Downloads, Exporte und Statusabfragen autorisieren ausdrücklich. Korrektur, Freigabe, Neustart und Benutzeränderung autorisieren außerdem in ihren Anwendungsklassen. Dadurch bleibt eine direkte Aktionsausführung geschützt. Die Oberfläche blendet unzulässige Möglichkeiten zusätzlich aus, ist aber nicht die Sicherheitsgrenze.
 
 Rollenänderungen greifen beim nächsten Request. Sie können bereits abgeschlossene Downloads nicht zurückholen und stoppen nicht rückwirkend jeden schon laufenden Request. Diese zeitliche Grenze ist für die Interpretation von „sofort wirksam“ wichtig.
 
-<a id="dokumentenablauf"></a>
-## 9. Dokumentenablauf im Detail
+<a id="aufgabenablauf"></a>
+## 9. Aufgabenablauf im Detail
 
 ### 9.1 Upload
 
-Filament nimmt zunächst einen temporären privaten Upload entgegen. `UploadDocument` prüft zusätzlich serverseitig die Uploadgültigkeit, die tatsächliche Bytegröße gegen das typabhängige Limit (TXT 256 KiB, PDF 8 MiB) sowie je Typ: bei TXT Dateiendung `txt`, gültiges UTF-8, nicht leeren Inhalt und keine unzulässigen binären Steuerzeichen; bei PDF Dateiendung `pdf`, `%PDF-`-Kopf, `%%EOF`-Ende und MIME-Typ `application/pdf`. Eine Dateiendung allein reicht also nicht aus, um ein Dokument anzunehmen.
+Filament nimmt zunächst einen temporären privaten Upload entgegen. `UploadTask` prüft zusätzlich serverseitig die Uploadgültigkeit, die tatsächliche Bytegröße gegen das typabhängige Limit (TXT 256 KiB, PDF 8 MiB) sowie je Typ: bei TXT Dateiendung `txt`, gültiges UTF-8, nicht leeren Inhalt und keine unzulässigen binären Steuerzeichen; bei PDF Dateiendung `pdf`, `%PDF-`-Kopf, `%%EOF`-Ende und MIME-Typ `application/pdf`. Eine Dateiendung allein reicht also nicht aus, um eine Aufgabe anzunehmen.
 
-Das Original wird auf dem privaten Storage-Disk mit einem erzeugten Pfad und gespeichertem MIME-Typ abgelegt. PDFs werden in der Detailseite über einen autorisierten Inline-Endpunkt im iframe vorgeschaut; TXT wird als Text ausgegeben. Der ursprüngliche Dateiname dient als Anzeigeinformation, nicht als frei wählbarer Speicherpfad. Eine SHA-256-Prüfsumme ermöglicht die spätere Prüfung, ob der gespeicherte Inhalt noch zum Dokumentdatensatz passt.
+Das Original wird auf dem privaten Storage-Disk mit einem erzeugten Pfad und gespeichertem MIME-Typ abgelegt. PDFs werden in der Detailseite über einen autorisierten Inline-Endpunkt im iframe vorgeschaut; TXT wird als Text ausgegeben. Der ursprüngliche Dateiname dient als Anzeigeinformation, nicht als frei wählbarer Speicherpfad. Eine SHA-256-Prüfsumme ermöglicht die spätere Prüfung, ob der gespeicherte Inhalt noch zum Aufgabendatensatz passt.
 
-Anschließend legt eine Datenbanktransaktion Dokument, ersten KI-Lauf und Audit-Eintrag an. Scheitert diese Transaktion, versucht die Anwendung, die zuvor gespeicherte Datei wieder zu entfernen. Dateisystem und Datenbank sind trotzdem keine gemeinsame atomare Transaktion: Ein harter Prozessabbruch zwischen Dateischreiben und Datenbankabschluss kann eine verwaiste Datei hinterlassen. Dafür existiert noch kein gesonderter Bereinigungslauf.
+Anschließend legt eine Datenbanktransaktion Aufgabe, erste KI-Ausführung und Audit-Eintrag an. Scheitert diese Transaktion, versucht die Anwendung, die zuvor gespeicherte Datei wieder zu entfernen. Dateisystem und Datenbank sind trotzdem keine gemeinsame atomare Transaktion: Ein harter Prozessabbruch zwischen Dateischreiben und Datenbankabschluss kann eine verwaiste Datei hinterlassen. Dafür existiert noch kein gesonderter Bereinigungslauf. TXT-Originale werden zusätzlich in überlappende Retrieval-Chunks zerlegt (`task_chunks`, ohne Embeddings); PDFs warten auf einen Texterkennungsschritt.
 
 ### 9.2 Hintergrundverarbeitung und Anzeige
 
-Der Job wird nach dem Datenbank-Commit zugestellt. Der Browser wartet nicht auf den Modellaufruf. Auf der Dokumentdetailseite fragt Livewire den Verarbeitungsstand alle drei Sekunden ab, solange ein Lauf `queued` oder `running` ist. Sobald kein solcher Lauf mehr besteht, wird das Polling entfernt.
+Der Job wird nach dem Datenbank-Commit zugestellt. Der Browser wartet nicht auf den Modellaufruf. Auf der Aufgabendetailseite fragt Livewire den Verarbeitungsstand alle drei Sekunden ab, solange eine Ausführung `queued` oder `running` ist. Sobald keine solche Ausführung mehr besteht, wird das Polling entfernt.
 
-Der Worker liest das private Original, prüft die Eingabeversion und die Prüfsumme, ruft den gewählten Extractor auf und validiert das Ergebnis. Bei erfolgreicher und noch aktueller Übernahme setzt er die Ergebnisfelder und `in_review`. Er setzt niemals `approved`.
+Der Worker liest das private Original, prüft die Eingabeversion und die Prüfsumme, ruft den gewählten Extractor auf und validiert das Ergebnis. Bei erfolgreicher und noch aktueller Übernahme setzt er den Ergebnis-Payload und `in_review`. Er setzt niemals `approved`.
 
 ### 9.3 Menschliche Korrektur
 
-Die Bearbeitungsseite zeigt Originaltext und Ergebnisfelder. Das Rechnungsdatum wird über einen Kalender im deutschen Anzeigeformat gewählt; alle übrigen Felder sind Texteingaben mit Live-Hinweisen zur Rechenprüfung und KI-Konfidenz. `CorrectDocument` sperrt den Dokumentdatensatz, prüft die Berechtigung und vergleicht die vom Formular geladene Revision mit dem aktuellen Stand. Bei einer zwischenzeitlichen Änderung wird das Speichern abgelehnt; der Benutzer muss neu laden.
+Die Bearbeitungsseite zeigt Original und Ergebnis-Payload als JSON. `CorrectTask` sperrt den Aufgabendatensatz, prüft die Berechtigung und vergleicht die vom Formular geladene Revision mit dem aktuellen Stand. Bei einer zwischenzeitlichen Änderung wird das Speichern abgelehnt; der Benutzer muss neu laden. Feldgenaue Masken mit Prüfungshinweisen liefert das Domain-Modul (Vorlage: Rechnungsmaske in `examples/invoice-extraction`).
 
-Eine Korrektur enthält im gegenwärtigen Formular immer alle Pflichtfelder. Unvollständige Teilergebnisse können nicht als beliebiger Zwischenentwurf gespeichert werden. Ein vollständig und gültig manuell erfasster Stand kann hingegen auch dann `in_review` werden, wenn die KI noch läuft oder fehlgeschlagen ist. Die Anwendung verlangt vor Freigabe keinen erfolgreichen KI-Lauf, sondern einen gültigen menschlich prüfbaren Dokumentstand.
+Eine Korrektur ersetzt den Ergebnis-Payload im Ganzen; unvollständige Teilergebnisse können nicht als beliebiger Zwischenentwurf gespeichert werden. Ein vollständig und gültig manuell erfasster Stand kann hingegen auch dann `in_review` werden, wenn die KI noch läuft oder fehlgeschlagen ist. Die Anwendung verlangt vor Freigabe keine erfolgreiche KI-Ausführung, sondern einen gültigen menschlich prüfbaren Aufgabenstand.
 
-Vorherige und neue Feldwerte werden im Korrektur-Audit festgehalten. Das ursprüngliche KI-Ergebnis bleibt im zugehörigen `ai_runs.result` erhalten. So lässt sich unterscheiden, was der Anbieter geliefert und was ein Mensch verändert hat.
+Vorherige und neue Payloads werden im Korrektur-Audit festgehalten. Das ursprüngliche KI-Ergebnis bleibt im zugehörigen `executions.result` erhalten. So lässt sich unterscheiden, was der Anbieter geliefert und was ein Mensch verändert hat.
 
 ### 9.4 Freigabe
 
-Ein reviewer oder admin bestätigt die Freigabe in einem Dialog. `ApproveDocument` prüft Berechtigung, Dokumentstatus und Revision innerhalb einer Transaktion erneut. Auch die fachliche Ergebnisvalidierung wird nochmals ausgeführt. Erst danach werden `approved`, Freigabezeitpunkt und Benutzer gesetzt und ein Audit-Eintrag geschrieben.
+Ein reviewer oder admin bestätigt die Freigabe in einem Dialog. `ApproveTask` prüft Berechtigung, Aufgabenstatus und Revision innerhalb einer Transaktion erneut. Auch die fachliche Ergebnisvalidierung wird nochmals ausgeführt. Erst danach werden `approved`, Freigabezeitpunkt und Benutzer gesetzt und ein Audit-Eintrag geschrieben.
 
-Diese Wiederholungsprüfung ist gewollt. Zwischen Anzeige und Bestätigung können Daten geändert worden sein. Ein bestätigter Dialog allein beweist nicht, dass noch derselbe Dokumentstand freigegeben wird.
+Diese Wiederholungsprüfung ist gewollt. Zwischen Anzeige und Bestätigung können Daten geändert worden sein. Ein bestätigter Dialog allein beweist nicht, dass noch derselbe Aufgabenstand freigegeben wird.
 
-### 9.5 CSV-Export
+### 9.5 JSON-Export
 
-`ExportDocument` lädt den aktuellen Stand und prüft die Export-Policy. Der Export enthält eine Kopfzeile und genau ein Dokument mit Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag, Währung, Netto, Umsatzsteuer und IBAN. Verwendet werden Semikolon, UTF-8 mit BOM und CRLF-Zeilenenden. Das erleichtert die Nutzung in verbreiteten Tabellenkalkulationen; eine konkrete ERP-Importspezifikation ist damit noch nicht erfüllt.
+`ExportTask` lädt den aktuellen Stand und prüft die Export-Policy. Der Export enthält Aufgaben-ID, Titel, Status, Revision, Freigabezeitpunkt und den Ergebnis-Payload als formatiertes JSON. Fachspezifische Formate (z. B. CSV mit Kopfzeile, Semikolon und Formelzellenschutz) liefert das Domain-Modul; die Vorlage steht in `examples/invoice-extraction`.
 
-Zellen mit gefährlichen Formelanfängen werden durch ein vorangestelltes Apostroph als Text markiert. Das betrifft auch einen negativen Betrag. Für einen maschinellen Folgeimport kann deshalb eine eigene, ausdrücklich spezifizierte Exportvariante erforderlich sein. Die jetzige Entscheidung priorisiert die sichere Öffnung in einer Tabellenkalkulation gegenüber einer uneingeschränkten Weiterinterpretation aller Zellen als Zahlen.
+Der Audit-Eintrag dokumentiert die erfolgreiche JSON-Erzeugung durch den Server. Er beweist nicht, dass der Browser die gesamte Datei empfangen oder ein Benutzer sie gespeichert hat. Jeder erneute Export kann einen weiteren Audit-Eintrag erzeugen.
 
-Der Audit-Eintrag dokumentiert die erfolgreiche CSV-Erzeugung durch den Server. Er beweist nicht, dass der Browser die gesamte Datei empfangen oder ein Benutzer sie gespeichert hat. Jeder erneute Export kann einen weiteren Audit-Eintrag erzeugen.
+### 9.6 Interner Golden-Datensatz zur Bewertungsgrundlage (Beispielmodul)
 
-### 9.6 Interner Golden-Datensatz zur Extraktionsbewertung
-
-Ein admin kann ein freigegebenes PDF-Dokument über „Golden-Datensatz speichern“ als Evaluierungs-Fixture sichern. `SubmitGoldenDataset` prüft erneut Berechtigung, Prüfsumme und Rechenregeln und legt Original plus erwartete Felder (`original.pdf`, `expected.json`) unter `GOLDEN_DATASET_PATH` (Standard `tests/Fixtures/GoldenDataset`, eigenes Volume) ab. `php artisan ai:eval` misst daran Trefferquote und Konfidenz des gewählten Treibers; ohne `--allow-external` wird nichts an einen Anbieter übertragen, der Bericht enthält keine Dokumentinhalte. Fixtures sind interne Qualitätsdaten und gehören nicht in Git.
+Im Rechnungsbeispiel kann ein admin eine freigegebene PDF-Aufgabe über „Golden-Datensatz speichern“ als Evaluierungs-Fixture sichern. `SubmitGoldenDataset` prüft erneut Berechtigung und Prüfsumme und legt Original plus erwartete Felder (`original.pdf`, `expected.json`) unter `GOLDEN_DATASET_PATH` (Standard `tests/Fixtures/GoldenDataset`, eigenes Volume) ab. `php artisan ai:eval` misst daran Trefferquote und Konfidenz des gewählten Treibers; ohne `--allow-external` wird nichts an einen Anbieter übertragen, der Bericht enthält keine Aufgabeninhalte. Fixtures sind interne Qualitätsdaten und gehören nicht in Git. Das Kommando lebt im Beispielmodul und wird nach `app/Console/Commands` kopiert, um es zu registrieren.
 
 <a id="ki"></a>
 ## 10. KI-Anbindung und Validierung
 
 ### 10.1 Die fachliche Schnittstelle
 
-`DocumentExtractor` trennt die Anwendungslogik vom Anbieter. Der Eingang `ExtractionInput` enthält Text, Versuchsnummer, Modell, Promptversion, das gegebenenfalls verwendete Fake-Szenario und den MIME-Typ. `ExtractionResult` enthält Ergebnisfelder, die KI-Selbsteinschätzung je Feld und optionale Tokeninformationen. Der Worker muss keine anbieterspezifischen HTTP-Antworten verstehen.
+`TaskExtractor` trennt die Anwendungslogik vom Anbieter. Der Eingang `TaskInput` enthält Text, Versuchsnummer, Modell, Promptversion, das gegebenenfalls verwendete Fake-Szenario und den MIME-Typ. `TaskResult` enthält den Ergebnis-Payload, die KI-Selbsteinschätzung je Feld und optionale Tokeninformationen. Der Worker muss keine anbieterspezifischen HTTP-Antworten verstehen.
 
 Diese Grenze ist klein genug, um verständlich zu bleiben. Sie ist keine universelle Abstraktion für alle möglichen KI-Funktionen. Ein späterer Chat, ein Embedding-Auftrag oder eine Bildanalyse benötigt nicht zwangsläufig denselben fachlichen Vertrag.
 
 ### 10.2 Der Fake
 
-Der Fake ist der Standardtreiber. Er liefert reproduzierbare Demonstrationswerte; die Rechnungsnummer wird aus einem Hash des Eingabetextes abgeleitet. Er liest keinen echten Lieferanten oder Betrag aus dem Text. Seine angegebenen Tokenzahlen sind ebenfalls Demonstrationswerte und keine Verbrauchsmessung.
+Der Fake ist der Standardtreiber. Er liefert reproduzierbare Demonstrationswerte (Zusammenfassung, Textauszug, Sprache); er liest keine echten Fachwerte aus dem Text. Seine angegebenen Tokenzahlen sind ebenfalls Demonstrationswerte und keine Verbrauchsmessung.
 
 | Szenario | Verhalten | Zweck |
 | --- | --- | --- |
@@ -341,42 +339,32 @@ Automatisierte Tests setzen die Verzögerung auf null. Der simulierte Timeout is
 
 ### 10.3 Der Live-Adapter mit Laravel AI SDK
 
-`OpenAiDocumentExtractor` verwendet den OpenAI-Provider des Laravel AI SDK und den strukturierten Agenten `InvoiceExtraction`. Der Agent deklariert ein striktes Schema, maximal einen Schritt und maximal 1.000 Ausgabetokens. Das Modell wird aus dem Lauf übergeben und nicht vom SDK beliebig gewählt. Der voreingestellte Snapshot ist `gpt-4.1-mini-2025-04-14`.
+`LiveTaskExtractor` lässt die `LlmProviderFactory` den konfigurierten Driver (`OpenAiDriver`, `AzureOpenAiDriver`, `OllamaDriver` via `AI_LIVE_PROVIDER`) bauen und ruft den konfigurierten Agenten (`ai.agent`, Standard `GeneralTaskAgent`) auf. Der Agent deklariert ein striktes Schema, maximal einen Schritt und maximal 2.000 Ausgabetokens. Das Modell wird aus der Ausführung übergeben und nicht vom SDK beliebig gewählt. Der voreingestellte Snapshot ist `gpt-4.1-mini-2025-04-14`.
 
-Der konfigurierte Endpunkt ist die OpenAI Responses API unter `https://api.openai.com/v1/responses`. `AI_URL` bleibt eine vollständige Endpoint-URL; der Adapter leitet daraus die vom SDK benötigte Basis-URL ab. Eine geänderte URL ist Betreiberkonfiguration, keine frei vom Dokument oder Browser wählbare Adresse. Der Adapter setzt HTTPS und den abschließenden Pfad `/responses` voraus.
+Für den OpenAI-Driver ist der konfigurierte Endpunkt die OpenAI Responses API unter `https://api.openai.com/v1/responses`. `AI_URL` bleibt eine vollständige Endpoint-URL; der Driver leitet daraus die vom SDK benötigte Basis-URL ab. Eine geänderte URL ist Betreiberkonfiguration, keine frei von der Aufgabe oder dem Browser wählbare Adresse. Der Driver setzt HTTPS und den abschließenden Pfad `/responses` voraus. Azure benötigt `AI_AZURE_KEY`/`AI_AZURE_URL`, Ollama `AI_OLLAMA_URL` (Schlüssel optional).
 
-Der SDK-Aufruf erhält keine Tools, keine vorherige Unterhaltung und keine Möglichkeit, Geschäftsaktionen auszuführen. `store=false` wird gesetzt. Das ist keine umfassende Zusicherung zur Datenaufbewahrung durch den Anbieter; eine Kundenfreigabe der Datenübermittlung bleibt gesondert erforderlich. Bei TXT wird der gesamte eingereichte Text übertragen; bei PDF wird das Original als Dokumentanhang mit kurzer Extraktionsanweisung übergeben.
+Der SDK-Aufruf erhält keine Tools, keine vorherige Unterhaltung und keine Möglichkeit, Geschäftsaktionen auszuführen. `store=false` wird gesetzt. Das ist keine umfassende Zusicherung zur Datenaufbewahrung durch den Anbieter; eine Kundenfreigabe der Datenübermittlung bleibt gesondert erforderlich. Bei TXT wird der gesamte eingereichte Text übertragen; bei PDF wird das Original als Dateianhang mit kurzer Verarbeitungsanweisung übergeben.
 
-`DocumentOpenAiGateway` ergänzt den SDK-Transport um einen Verbindungs-Timeout von fünf Sekunden und deaktivierte HTTP-Redirects. Vor der SDK-Dekodierung prüft es den Antwortstatus, die grundlegende Outputstruktur und eine mögliche Verweigerung. Fehler werden in verständliche Kategorien übersetzt, ohne die vollständige Providerantwort oder einen geheimnishaltigen Exception-Vorgänger weiterzureichen.
+`OpenAiResponseGateway` ergänzt den SDK-Transport um einen Verbindungs-Timeout von fünf Sekunden und deaktivierte HTTP-Redirects. Vor der SDK-Dekodierung prüft es den Antwortstatus, die grundlegende Outputstruktur und eine mögliche Verweigerung. Fehler werden in verständliche Kategorien übersetzt, ohne die vollständige Providerantwort oder einen geheimnishaltigen Exception-Vorgänger weiterzureichen.
 
-Die Anwendung nutzt hier gezielt die strukturierte Ausgabe des SDK. Streaming, Tool Calling, Agent Conversations, Embeddings, Bilder und weitere Anbieter sind nicht als Templatefunktionen integriert. Welche Möglichkeiten das SDK darüber hinaus bietet, beschreibt die [offizielle SDK-Dokumentation](https://laravel.com/docs/13.x/ai-sdk); deren Verfügbarkeit ist nicht mit einer Umsetzung im Template gleichzusetzen.
+Die Anwendung nutzt hier gezielt die strukturierte Ausgabe des SDK. Streaming, Tool Calling, Agent Conversations, Bilder und weitere Anbieter über die drei konfigurierten Driver hinaus sind nicht als Templatefunktionen integriert. Welche Möglichkeiten das SDK darüber hinaus bietet, beschreibt die [offizielle SDK-Dokumentation](https://laravel.com/docs/13.x/ai-sdk); deren Verfügbarkeit ist nicht mit einer Umsetzung im Template gleichzusetzen. Embeddings sind reserviert (`task_chunks.embedding`), aber noch nicht angebunden.
 
 ### 10.4 Warum strukturierte Ausgabe allein nicht reicht
 
-Das Modellschema verlangt acht Ergebnisfelder (Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag, Währung sowie optional Netto, Umsatzsteuer, IBAN) und eine Konfidenzzahl zwischen 0 und 1 je Feld. Anschließend prüft `ValidateExtraction` unabhängig vom Modell, ob die Antwort ein Objekt mit den erlaubten Feldern ist, alle Pflichtfelder vorhanden sind und ihre Inhalte den Regeln entsprechen. Unbekannte Felder werden zurückgewiesen. Die Pflichtfelder Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag und Währung müssen stets vorhanden sein; die Konfidenz beeinflusst die Übernahme nicht, sie wird nur angezeigt und gespeichert.
+Das Kernschema verlangt einen Ergebnis-Payload aus höchstens 50 skalaren Feldern und eine Konfidenzzahl zwischen 0 und 1 je Feld. Anschließend prüft der konfigurierte `ResultValidator` (`ai.validator`, Standard `ValidateTaskPayload`) unabhängig vom Modell die Containerform. Fachliche Feldregeln steuert das Domain-Modul bei: Das Rechnungsbeispiel verlangt acht Felder (Lieferant, Rechnungsnummer, Rechnungsdatum, Gesamtbetrag, Währung sowie optional Netto, Umsatzsteuer, IBAN), prüft Datumsformat, Dezimalstrings, ISO-Währung und Feldlängen und gleicht Nachkommastellen mit der Währung ab. Die Konfidenz beeinflusst die Übernahme nicht, sie wird nur angezeigt und gespeichert.
 
-| Feld | Aktuelle fachliche Prüfung |
-| --- | --- |
-| Lieferant | Nicht leerer String, höchstens 255 Zeichen |
-| Rechnungsnummer | Nicht leerer String, höchstens 120 Zeichen |
-| Rechnungsdatum | Tatsächlich gültiges Datum im Format `YYYY-MM-DD` |
-| Gesamtbetrag | Dezimalstring, kein Float, keine Exponentialschreibweise, begrenzte Stellenzahl |
-| Währung | Bekannte dreistellige ISO-Währungskennung in Großbuchstaben |
-
-Zusätzlich werden die relevanten Nachkommastellen mit der Währung abgeglichen. Nachgestellte Nullen erhöhen dabei nicht die fachliche Präzision. Speicherung und Eloquent-Cast verwenden eine präzise Dezimaldarstellung mit vier Nachkommastellen. Negative Beträge sind erlaubt, um beispielsweise Gutschriften darzustellen.
-
-Die Validierung beweist Form und Plausibilität innerhalb dieser Regeln. Sie beweist nicht, dass der gelesene Betrag tatsächlich zur Rechnung gehört oder der Lieferant richtig erkannt wurde. Es fehlen beispielsweise eine mathematische Prüfung von Rechnungspositionen, Dublettenerkennung, Steuerregeln, ein Lieferantenstammabgleich und eine gemessene Erkennungsqualität. Deshalb bleibt die menschliche Freigabe zentral.
+Die Validierung beweist Form und Plausibilität innerhalb dieser Regeln. Sie beweist nicht, dass ein gelesener Wert tatsächlich zur Aufgabe gehört. Es fehlen beispielsweise eine Dublettenerkennung, Stammabgleiche und eine gemessene Erkennungsqualität (im Beispiel zusätzlich Positions-, Steuer- und Lieferantenprüfungen). Deshalb bleibt die menschliche Freigabe zentral.
 
 <a id="queue"></a>
 ## 11. Queue, Wiederholung und Nebenläufigkeit
 
 ### 11.1 Die drei Phasen einer Verarbeitung
 
-Eine lange Datenbanktransaktion während eines Modellaufrufs würde Sperren unnötig halten und andere Benutzer behindern. `ProcessExtraction` trennt deshalb die Verarbeitung in drei Phasen:
+Eine lange Datenbanktransaktion während eines Modellaufrufs würde Sperren unnötig halten und andere Benutzer behindern. `ProcessExecution` trennt deshalb die Verarbeitung in drei Phasen:
 
-1. **Beanspruchen:** In einer kurzen Transaktion wird der Lauf gesperrt und geprüft. Ein bereits beendeter Lauf, eine noch aktive Lease oder ein noch nicht fälliger Versuch wird nicht erneut verarbeitet. Ein neuer Versuch erhält eine zufällige Besitzerkennung, eine Ablaufzeit und einen erhöhten Versuchszähler.
+1. **Beanspruchen:** In einer kurzen Transaktion wird die Ausführung gesperrt und geprüft. Eine bereits beendete Ausführung, eine noch aktive Lease oder ein noch nicht fälliger Versuch wird nicht erneut verarbeitet. Ein neuer Versuch erhält eine zufällige Besitzerkennung, eine Ablaufzeit und einen erhöhten Versuchszähler.
 2. **Extrahieren:** Außerhalb einer offenen Anwendungstransaktion liest der Worker das Original, prüft Version und Hash und ruft den Extractor auf. Hier darf der externe Dienst Zeit benötigen.
-3. **Übernehmen:** Eine neue kurze Transaktion sperrt Dokument und Lauf. Nur der noch gültige Besitzer mit gültiger Lease darf abschließen. Eingabeversion, Bearbeitungsrevision und Freigabestatus bestimmen, ob die Felder noch übernommen werden dürfen.
+3. **Übernehmen:** Eine neue kurze Transaktion sperrt Aufgabe und Ausführung. Nur der noch gültige Besitzer mit gültiger Lease darf abschließen. Eingabeversion, Bearbeitungsrevision und Freigabestatus bestimmen, ob die Felder noch übernommen werden dürfen.
 
 ```mermaid
 sequenceDiagram
@@ -384,16 +372,16 @@ sequenceDiagram
     participant DB as PostgreSQL
     participant W as Worker
     participant AI as Extractor
-    UI->>DB: Dokument und Lauf anlegen
+    UI->>DB: Aufgabe und Ausführung anlegen
     Note over UI,DB: Commit, danach Queue-Dispatch
-    W->>DB: Lauf sperren und Lease beanspruchen
+    W->>DB: Ausführung sperren und Lease beanspruchen
     W->>AI: Extraktion ohne offene DB-Transaktion
     opt Mensch korrigiert inzwischen
         UI->>DB: Felder ändern, Revision erhöhen
     end
     AI-->>W: Ergebnis
     W->>DB: Besitzer, Lease und Revision prüfen
-    Note over W,DB: Aktuell: übernehmen; überholt: nur Laufresultat speichern
+    Note over W,DB: Aktuell: übernehmen; überholt: nur Ausführungsergebnis speichern
 ```
 
 ### 11.2 Die abgestimmten Zeitgrenzen
@@ -403,7 +391,7 @@ sequenceDiagram
 | Verbindungsaufbau zum KI-Anbieter | 5 Sekunden | Verbindungsprobleme früh erkennen |
 | Gesamter KI-HTTP-Request | 30 Sekunden | Modellaufruf zeitlich begrenzen |
 | Laravel-Job | 60 Sekunden | Verarbeitung einschließlich Ein-/Ausgabe begrenzen |
-| Lauf-Lease | 90 Sekunden | Kurzzeitig parallele Besitzer verhindern |
+| Ausführungs-Lease | 90 Sekunden | Kurzzeitig parallele Besitzer verhindern |
 | Queue `retry_after` | 120 Sekunden | Reservierten Job erst später erneut zustellbar machen |
 | Recovery-Alter seit Dispatch | 180 Sekunden | Verwaiste Zustellabsichten erneut aufgreifen |
 | Geordnetes Stoppen des Workers | 75 Sekunden | Regulären 60-Sekunden-Job vor Prozessende abschließen lassen |
@@ -414,15 +402,15 @@ Die Anwendung prüft beim Booten die konfigurierte Reihenfolge HTTP < Job < Leas
 
 Vorübergehende Fehler wie Timeout, Rate Limit oder vorübergehende Anbieterprobleme dürfen bis zum Gesamtbudget von drei Modellversuchen wiederholt werden. Nach dem ersten Fehler beträgt die Pause zehn, danach dreißig Sekunden. Ungültige Ergebnisse, verweigerte Antworten oder Konfigurationsfehler werden nicht durch unbegrenztes Wiederholen behandelt.
 
-Es existiert keine zusätzliche HTTP-Retry-Schleife und kein SDK-Failover. Laravel zählt technische Jobversuche; zusätzlich begrenzt der gespeicherte Lauf die tatsächlichen Extraktionsversuche. Auch bei einer erneuten technischen Zustellung kann der fachliche Lauf dadurch sein Budget nicht einfach neu beginnen.
+Es existiert keine zusätzliche HTTP-Retry-Schleife und kein SDK-Failover. Laravel zählt technische Jobversuche; zusätzlich begrenzt die gespeicherte Ausführung die tatsächlichen Ausführungsversuche. Auch bei einer erneuten technischen Zustellung kann der fachliche Ausführungsverlauf dadurch sein Budget nicht einfach neu beginnen.
 
-Ein autorisierter manueller Neustart ist ein neuer KI-Lauf. Das erhält die alte Fehlgeschichte und erlaubt, die neue Anforderung mit neuer Konfiguration nachvollziehbar zu behandeln. Ein erfolgreicher Lauf kann nicht beliebig über dieselbe Aktion erneut gestartet werden: Die aktuelle Retry-Regel verlangt den letzten Lauf im Zustand `failed`.
+Ein autorisierter manueller Neustart ist eine neue KI-Ausführung. Das erhält die alte Fehlgeschichte und erlaubt, die neue Anforderung mit neuer Konfiguration nachvollziehbar zu behandeln. Eine erfolgreiche Ausführung kann nicht beliebig über dieselbe Aktion erneut gestartet werden: Die aktuelle Retry-Regel verlangt die letzte Ausführung im Zustand `failed`.
 
 ### 11.4 Wiederanlauf und Idempotenz
 
-Der Laufdatensatz wird vor dem Dispatch festgeschrieben. Scheitert danach das Zustellen des Queue-Jobs, bleibt dieser Datensatz als dauerhafte Absicht erhalten. `ai:recover` findet fällige, nicht mehr beanspruchte Läufe und stellt sie erneut zu. Der Befehl besitzt einen eigenen Datenbank-Cache-Lock und wird beim Workerstart ausgeführt. Für laufenden Betrieb ist zusätzlich der dokumentierte minütliche Host-Cron einzurichten.
+Der Ausführungsdatensatz wird vor dem Dispatch festgeschrieben. Scheitert danach das Zustellen des Queue-Jobs, bleibt dieser Datensatz als dauerhafte Absicht erhalten. `ai:recover` findet fällige, nicht mehr beanspruchte Ausführungen und stellt sie erneut zu. Der Befehl besitzt einen eigenen Datenbank-Cache-Lock und wird beim Workerstart ausgeführt. Für laufenden Betrieb ist zusätzlich der dokumentierte minütliche Host-Cron einzurichten.
 
-Nach einem harten Workerabbruch kann die Queue-Reservierung auslaufen und die Lease neu beansprucht werden. Reicht das Versuchskontingent nicht mehr, wird der Lauf nachvollziehbar als fehlgeschlagen abgeschlossen. Menschliche Prüfung hält dabei keinen Worker offen: Sie wird durch Dokumentstatus und Benutzeraktionen abgebildet.
+Nach einem harten Workerabbruch kann die Queue-Reservierung auslaufen und die Lease neu beansprucht werden. Reicht das Versuchskontingent nicht mehr, wird die Ausführung nachvollziehbar als fehlgeschlagen abgeschlossen. Menschliche Prüfung hält dabei keinen Worker offen: Sie wird durch Aufgabenstatus und Benutzeraktionen abgebildet.
 
 Idempotenz bedeutet hier, dass dieselbe fachliche Ergebnisübernahme nicht mehrfach erfolgt und Benutzerkorrekturen nicht durch einen alten Besitzer überschrieben werden. Es bedeutet nicht, dass der Anbieter bei jedem Verbindungsabbruch garantiert nur einen abrechenbaren Request gesehen hat. Ebenso kann eine künstliche Umgebung, die Prozesse länger als sämtliche Timeouts einfriert, eine bereits extern gestartete Anfrage nicht durch eine lokale Lease zurückholen.
 
@@ -435,7 +423,7 @@ Originaltexte werden als Text ausgegeben. Zeichenfolgen wie `<script>` dürfen i
 
 Privat gespeichert bedeutet nicht automatisch verschlüsselt gespeichert. Die Originaldateien, fachlichen Ergebnisfelder und Auditänderungen werden im Template nicht gesondert auf Anwendungsebene verschlüsselt. Auch die Datenbank-Sessionverschlüsselung ist standardmäßig nicht aktiviert. Wer Verschlüsselung im Ruhezustand benötigt, muss das über die Betriebsumgebung oder eine bewusst entworfene zusätzliche Lösung umsetzen.
 
-Die Anwendung vermeidet vollständige Dokumente, API-Schlüssel und rohe Providerantworten in gewöhnlichen Fehlerlogs. Nginx-Access-Logging ist deaktiviert, um unter anderem OAuth-Code- und Query-String-Protokollierung zu vermeiden. Ein vorgeschalteter HTTPS-Proxy oder die Infrastruktur besitzt jedoch eigene Loggingregeln; diese müssen ebenfalls passend eingerichtet werden.
+Die Anwendung vermeidet vollständige Aufgaben, API-Schlüssel und rohe Providerantworten in gewöhnlichen Fehlerlogs. Nginx-Access-Logging ist deaktiviert, um unter anderem OAuth-Code- und Query-String-Protokollierung zu vermeiden. Ein vorgeschalteter HTTPS-Proxy oder die Infrastruktur besitzt jedoch eigene Loggingregeln; diese müssen ebenfalls passend eingerichtet werden.
 
 Das Audit ist für fachliche Nachvollziehbarkeit vorgesehen. Es enthält zum Beispiel Korrekturwerte und ist damit selbst schützenswert. Es ist kein unveränderbares, gegen einen Datenbankadministrator abgesichertes Archiv. Es gibt derzeit weder eine besondere Audit-Verwaltungsoberfläche noch eine implementierte Aufbewahrungs- und Löschautomatik. Rechtliche Eignung oder eine bestimmte Zertifizierung wird nicht behauptet.
 
@@ -480,9 +468,9 @@ Danach `./bin/dev up` ausführen. Die aktuell eingerichtete Demo wurde unter `ht
 
 ### 13.4 Den Demoablauf nachvollziehen
 
-Als editor eine PDF- oder UTF-8-TXT-Datei unter „Dokumente → Erstellen“ hochladen. Auf der Detailseite die laufende Verarbeitung beobachten. Nach ungefähr acht Sekunden erscheint bei normalem Fake-Verlauf ein Ergebnis. Es enthält Demonstrationswerte; ein beliebiger Rechnungsinhalt ändert daher nicht automatisch Betrag und Lieferant.
+Als editor eine PDF- oder UTF-8-TXT-Datei unter „Aufgaben → Erstellen“ hochladen. Auf der Detailseite die laufende Verarbeitung beobachten. Nach ungefähr acht Sekunden erscheint bei normalem Fake-Verlauf ein Ergebnis (Zusammenfassung, Auszug, Sprache). Es enthält Demonstrationswerte; ein beliebiger Dateiinhalt ändert daher nicht automatisch die Zusammenfassung.
 
-Über „Werte korrigieren“ die Felder vollständig prüfen und speichern. Danach in einer getrennten Sitzung als reviewer oder admin anmelden, das Dokument öffnen und „Freigeben“ bestätigen. Anschließend steht der CSV-Export zur Verfügung. Beim editor bleibt er auch bei direktem Aufruf verboten.
+Über „Werte korrigieren“ Titel und Ergebnis-JSON prüfen und speichern. Danach in einer getrennten Sitzung als reviewer oder admin anmelden, die Aufgabe öffnen und „Freigeben“ bestätigen. Anschließend steht der JSON-Export zur Verfügung. Beim editor bleibt er auch bei direktem Aufruf verboten.
 
 Die getrennten Sitzungen erleichtern die Demonstration der Rollen. Zwei Browserprofile oder ein privates Browserfenster vermeiden, dass ein Rollenwechsel in derselben Session die gerade betrachtete Benutzerrolle verändert.
 
@@ -505,14 +493,19 @@ Die vollständige Vorlage ist [.env.example](../.env.example). Die folgende Übe
 | `CACHE_STORE` | Im vorgesehenen Betrieb `database`; auch Recovery-Locks verwenden den Cache |
 | `FILESYSTEM_DISK` | Standard `private`; die fachlichen Originaldateien verwenden ausdrücklich den privaten Disk |
 | `DEV_LOGIN_ENABLED` | Expliziter Demo-Login; wirkt nur in local/testing |
-| `DOCUMENT_MAX_KIB` | Fachliche TXT-Obergrenze, standardmäßig 256 KiB |
-| `DOCUMENT_PDF_MAX_KIB` | Fachliche PDF-Obergrenze, standardmäßig 8192 KiB |
+| `TASK_MAX_KIB` | Fachliche TXT-Obergrenze, standardmäßig 256 KiB |
+| `TASK_PDF_MAX_KIB` | Fachliche PDF-Obergrenze, standardmäßig 8192 KiB |
 | `AI_DRIVER` | `fake` oder `live` |
-| `AI_API_KEY` | Schlüssel für den Live-Anbieter; beim Fake nicht erforderlich |
-| `AI_MODEL` | Zentrale Modellauswahl für neu angelegte Live-Läufe |
-| `AI_URL` | Vollständiger Responses-Endpunkt; kein beliebiger universeller Anbieterumschalter |
+| `AI_LIVE_PROVIDER` | `openai`, `azure` oder `ollama`; Standard `openai` |
+| `AI_API_KEY` | Schlüssel für den Live-Anbieter; beim Fake nicht erforderlich (Ollama ohne Schlüssel möglich) |
+| `AI_MODEL` | Zentrale Modellauswahl für neu angelegte Live-Ausführungen |
+| `AI_URL` | Vollständiger Responses-Endpunkt des OpenAI-Drivers |
+| `AI_AZURE_KEY`, `AI_AZURE_URL`, `AI_AZURE_API_VERSION` | Zugang und Endpunkt des Azure-Drivers |
+| `AI_OLLAMA_KEY`, `AI_OLLAMA_URL` | Zugang und Endpunkt des Ollama-Drivers (Standard `http://localhost:11434`) |
+| `AI_AGENT`, `AI_VALIDATOR` | Agenten- und Validatorklasse; Fachmodule hinterlegen hier ihre Implementierungen |
 | `AI_TIMEOUT` | Gesamter KI-Request-Timeout, standardmäßig 30 Sekunden |
 | `AI_FAKE_SCENARIO`, `AI_FAKE_DELAY` | Reproduzierbare lokale Fehlerfälle und Verzögerung |
+| `RAG_ENABLED`, `RAG_CHUNK_SIZE`, `RAG_CHUNK_OVERLAP`, `RAG_MAX_CHUNKS`, `RAG_RETRIEVAL_LIMIT` | Keyword-Retrieval über TXT-Chunks; Embeddings reserviert |
 | `MICROSOFT_*` | Tenant, Client, Client-Secret und exakte Callback-Adresse |
 | `TELESCOPE_ENABLED` | Lokale Diagnose ausdrücklich aktivieren; keine Produktionsfreischaltung |
 | `TRUSTED_PROXIES` | Nur tatsächlich kontrollierte Proxyadressen bzw. Netze |
@@ -522,7 +515,7 @@ Die vollständige Vorlage ist [.env.example](../.env.example). Die folgende Übe
 
 Änderungen an `.env` erfordern im Containerbetrieb in der Regel ein Neuerstellen von App und Worker. Ein bereits laufender Worker liest den geänderten Code oder geänderte Einstellungen nicht zuverlässig von selbst ein. Falls Konfiguration bewusst gecacht wurde, muss auch dieser Cache aktualisiert werden. Das Template nimmt im normalen Einstieg keinen geheimnishaltigen Konfigurationscache in das gebaute Image auf.
 
-Für größere Uploadlimits müssen drei Ebenen zusammenpassen: die fachliche Laravel-/Livewire-Prüfung, das PHP-Uploadlimit von 10 MiB und die PHP-/Nginx-Requestgrenze von 12 MiB. Ein größeres Dateilimit löst außerdem weder Modellkontextgrenzen noch Tokenkosten. Größere Dokumente benötigen eine zusätzliche fachliche Entscheidung zur Segmentierung oder Ablehnung.
+Für größere Uploadlimits müssen drei Ebenen zusammenpassen: die fachliche Laravel-/Livewire-Prüfung, das PHP-Uploadlimit von 10 MiB und die PHP-/Nginx-Requestgrenze von 12 MiB. Ein größeres Dateilimit löst außerdem weder Modellkontextgrenzen noch Tokenkosten. Größere Aufgaben benötigen eine zusätzliche fachliche Entscheidung zur Segmentierung oder Ablehnung.
 
 <a id="entwicklung"></a>
 ## 15. Entwicklungswerkzeuge und Tests
@@ -535,13 +528,13 @@ Für größere Uploadlimits müssen drei Ebenen zusammenpassen: die fachliche La
 
 Der Befehl stellt die Testdatenbank `company_ai_test` bereit und führt Pint, PHPStan/Larastan, PHPUnit und Composer Audit aus. Die reguläre Suite setzt diese Testdatenbank zurück. Sie benötigt weder einen Entra-Testmandanten noch einen OpenAI-Schlüssel. HTTP-Fixtures verhindern echte Anbieteraufrufe.
 
-Im zuletzt dokumentierten Lauf bestanden 80 Tests mit 324 Assertions, Pint für 103 PHP-Dateien und die statische Analyse auf Level 8. Eine gemessene Testabdeckung in Prozent liegt nicht vor. Testzahlen sind Nachweise konkreter Prüfungen und kein Beweis für vollständige Fehlerfreiheit.
+Im zuletzt dokumentierten Stand bestanden 103 Tests mit 444 Assertions, Pint und die statische Analyse auf Level 8. Eine gemessene Testabdeckung in Prozent liegt nicht vor. Testzahlen sind Nachweise konkreter Prüfungen und kein Beweis für vollständige Fehlerfreiheit.
 
 Gezielte Befehle für die tägliche Arbeit:
 
 ```sh
 docker compose -f compose.yaml -f compose.dev.yaml exec -T app vendor/bin/pint
-docker compose -f compose.yaml -f compose.dev.yaml exec -T app vendor/bin/phpunit --filter=DocumentFlowTest
+docker compose -f compose.yaml -f compose.dev.yaml exec -T app vendor/bin/phpunit --filter=TaskFlowTest
 docker compose -f compose.yaml -f compose.dev.yaml exec -T app sh bin/analyse
 ./bin/dev composer validate --strict
 ```
@@ -572,9 +565,9 @@ Bei der aktuellen LAN-Demo auf dem verwendeten Alpine-Prüfhost:
 E2E_BASE_URL=http://192.168.178.200:8080 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser npm run test:e2e
 ```
 
-Diese Tests verwenden den laufenden lokalen Worker und erzeugen erkennbare Demo-Dokumente. Zwei Browserabläufe wurden zuletzt erfolgreich ausgeführt. Der optionale Telescope-Browsertest und sein temporärer Server sind in [Paketauswahl](packages.md) beschrieben.
+Diese Tests verwenden den laufenden lokalen Worker und erzeugen erkennbare Demo-Aufgaben. Zwei Browserabläufe wurden zuletzt erfolgreich ausgeführt. Der optionale Telescope-Browsertest und sein temporärer Server sind in [Paketauswahl](packages.md) beschrieben.
 
-`python3 tests/operations/lifecycle.py` ist eine weitergehende Betriebsprüfung. Sie unterbricht den lokalen Stack, beendet einen Worker während einer Fake-Verarbeitung, prüft Wiederanlauf und Persistenz und führt einen Restore in einem isolierten Produktionsprojekt aus. Sie darf nicht gegen eine Kundeninstallation verwendet werden. Die vollständige Betriebsprüfung wurde vor der letzten Paketergänzung erfolgreich durchgeführt; danach wurden Jobtests und ein separater frischer Produktionsstart erneut ausgeführt. Diese Unterscheidung bleibt im Prüfbericht sichtbar.
+`php tests/operations/lifecycle.php` ist eine weitergehende Betriebsprüfung. Sie unterbricht den lokalen Stack, beendet einen Worker während einer Fake-Verarbeitung, prüft Wiederanlauf und Persistenz und führt einen Restore in einem isolierten Produktionsprojekt aus. Sie darf nicht gegen eine Kundeninstallation verwendet werden. Die vollständige Betriebsprüfung wurde vor der letzten Paketergänzung erfolgreich durchgeführt; danach wurden Jobtests und ein separater frischer Produktionsstart erneut ausgeführt. Diese Unterscheidung bleibt im Prüfbericht sichtbar.
 
 ### 15.4 Boost und Telescope
 
@@ -601,7 +594,7 @@ Die Konfiguration ist vorhanden; eine Ausführung auf einem externen GitHub-Runn
 
 Vor Änderungen am Code sollten die Eingangsdaten, Ergebnisfelder und Freigabebedingungen schriftlich vereinbart werden. „Rechnung prüfen“ kann eine einfache Feldübernahme, einen Abgleich mit Bestellungen oder eine vollständige Freigabeentscheidung bedeuten. Das Template implementiert die erste Variante mit menschlicher Freigabe; die anderen Varianten müssen konkret ergänzt werden.
 
-Hilfreich ist ein kleines Set repräsentativer Beispiele: gültige Eingaben, fehlende Angaben, widersprüchliche Angaben, sehr lange Texte und bewusst manipulative Dokumentanweisungen. Dazu gehören erwartete Ergebnisse und die Fälle, in denen eine Bearbeitung abgelehnt oder manuell durchgeführt werden soll. Damit entsteht ein überprüfbarer Anwendungsfall anstelle einer unbestimmten Zusage, dass „die KI es erkennt“.
+Hilfreich ist ein kleines Set repräsentativer Beispiele: gültige Eingaben, fehlende Angaben, widersprüchliche Angaben, sehr lange Texte und bewusst manipulative Aufgabenanweisungen. Dazu gehören erwartete Ergebnisse und die Fälle, in denen eine Bearbeitung abgelehnt oder manuell durchgeführt werden soll. Damit entsteht ein überprüfbarer Anwendungsfall anstelle einer unbestimmten Zusage, dass „die KI es erkennt“.
 
 ### 16.2 Quellcode und Daten sauber übernehmen
 
@@ -621,7 +614,7 @@ Diese Reihenfolge hält Fehlerursachen überschaubar. Eine gleichzeitig geänder
 
 | Thema | Konkretes Ergebnis, das vorliegen sollte |
 | --- | --- |
-| Sichtbarkeit | Bestätigte Regel, wer welche Dokumente und KI-Läufe sehen darf |
+| Sichtbarkeit | Bestätigte Regel, wer welche Aufgaben und KI-Ausführungen sehen darf |
 | Freigabe | Bestätigte Rollen und Entscheidung über Eigenfreigabe oder Vier-Augen-Prinzip |
 | KI-Qualität | Bewerteter Beispieldatensatz mit akzeptablen Fehlern und klaren Ablehnungsfällen |
 | Identität | Eingerichteter Tenant, App-Registrierung, Zuweisung, Redirects und erster Administrator |
@@ -637,61 +630,61 @@ Das Template kann diese Entscheidungen technisch unterstützen. Es kann sie nich
 
 ### 17.1 Beispiel: ein zusätzliches Feld „Kostenstelle“
 
-Die folgenden Schritte beschreiben eine mögliche Erweiterung. Eine Kostenstelle ist im aktuellen Template nicht implementiert.
+Die folgenden Schritte beschreiben eine mögliche Erweiterung. Eine Kostenstelle ist im aktuellen Template nicht implementiert. Die Rechnungsvariante dieses Musters steht vollständig in `examples/invoice-extraction`.
 
-Zuerst wird festgelegt, ob die Kostenstelle aus dem Dokument stammen, von der KI vorgeschlagen oder ausschließlich von einem Menschen ausgewählt werden soll. Diese Entscheidung beeinflusst, ob das Feld überhaupt in das Modellschema gehört. Eine interne Kostenstelle, die im Dokument nicht vorkommt, sollte nicht durch einen Extraktionsprompt frei erfunden werden.
+Zuerst wird festgelegt, ob die Kostenstelle aus der Aufgabe stammen, von der KI vorgeschlagen oder ausschließlich von einem Menschen ausgewählt werden soll. Diese Entscheidung beeinflusst, ob das Feld überhaupt in das Modellschema gehört. Eine interne Kostenstelle, die in der Aufgabe nicht vorkommt, sollte nicht durch einen Verarbeitungsprompt frei erfunden werden.
 
 Für ein neues Datenbankfeld wird eine neue Migration angelegt, beispielsweise mit dem vorhandenen Laravel-Generator:
 
 ```sh
-./bin/dev artisan make:migration add_cost_center_to_documents_table --table=documents
+./bin/dev artisan make:migration add_cost_center_to_tasks_table --table=tasks
 ```
 
-Bei einer bereits genutzten Installation darf nicht nur eine alte Basismigration verändert werden. Bestehende Dokumente benötigen einen gültigen Übergang. Häufig wird ein Feld zunächst nullable eingeführt, anschließend werden Daten ergänzt und erst danach eine strengere Pflichtbedingung umgesetzt.
+Bei einer bereits genutzten Installation darf nicht nur eine alte Basismigration verändert werden. Bestehende Aufgaben benötigen einen gültigen Übergang. Häufig wird ein Feld zunächst nullable eingeführt, anschließend werden Daten ergänzt und erst danach eine strengere Pflichtbedingung umgesetzt.
 
-Wenn die KI das Feld liefern soll, werden der Ergebnisvertrag, `ValidateExtraction`, das Schema in `InvoiceExtraction`, der deterministische Fake und die passenden Fixtures gemeinsam angepasst. Andernfalls würde die zentrale Validierung das neue Modellfeld als unbekannt ablehnen oder ein alter Fake kein mehr gültiges Ergebnis liefern.
+Wenn die KI das Feld liefern soll, werden der Ergebnisvertrag, der `ResultValidator`, das Agentenschema, der deterministische Fake und die passenden Fixtures gemeinsam angepasst. Andernfalls würde die zentrale Validierung das neue Feld als unbekannt ablehnen oder ein alter Fake kein mehr gültiges Ergebnis liefern.
 
-Danach werden `Document::extractionFields()`, Filament-Formular und Detailansicht angepasst. Soll die Kostenstelle exportiert werden, muss die explizite CSV-Feldreihenfolge mit der Kopfzeile übereinstimmen. Ein Feld, das nur in der Datenbank existiert, erscheint nicht automatisch im Export.
+Danach werden Payload-Zugriff, Filament-Formular und Detailansicht angepasst. Soll die Kostenstelle in einem Fachformat exportiert werden, muss die explizite Feldreihenfolge des Exporters mit der Kopfzeile übereinstimmen. Ein Feld, das nur in der Datenbank existiert, erscheint nicht automatisch im Export.
 
 Abschließend werden Positiv- und Negativtests ergänzt: zulässige Kostenstelle, fehlende Kostenstelle, unzulässiger Wert, alte Bestandsdaten, manuelle Korrektur, Freigabe und Export. Eine reine Prüfung, dass das neue Eingabefeld sichtbar ist, reicht für diese Änderung nicht aus.
 
 ### 17.2 Beispiel: Vier-Augen-Prinzip
 
-Der aktuelle reviewer darf sein eigenes Dokument freigeben. Für ein Vier-Augen-Prinzip muss zuerst die genaue Regel definiert werden: Darf der Uploader nicht freigeben? Darf der letzte Bearbeiter nicht freigeben? Müssen zwei verschiedene Reviewer zustimmen? Diese Regeln sind fachlich verschieden.
+Der aktuelle reviewer darf seine eigene Aufgabe freigeben. Für ein Vier-Augen-Prinzip muss zuerst die genaue Regel definiert werden: Darf der Uploader nicht freigeben? Darf der letzte Bearbeiter nicht freigeben? Müssen zwei verschiedene Reviewer zustimmen? Diese Regeln sind fachlich verschieden.
 
-Für die einfache Variante „Uploader darf nicht freigeben“ würde `DocumentPolicy::approve` zusätzlich Benutzer und `uploaded_by` vergleichen. Die Freigabeaktion muss diese Policy weiterhin innerhalb ihrer Transaktion anwenden. Eine ausgeblendete Freigabeschaltfläche allein wäre unzureichend.
+Für die einfache Variante „Uploader darf nicht freigeben“ würde `TaskPolicy::approve` zusätzlich Benutzer und `uploaded_by` vergleichen. Die Freigabeaktion muss diese Policy weiterhin innerhalb ihrer Transaktion anwenden. Eine ausgeblendete Freigabeschaltfläche allein wäre unzureichend.
 
 Für „letzter Bearbeiter darf nicht freigeben“ wird eine verlässliche Information über diesen Bearbeiter benötigt. Für zwei gesonderte Freigaben ist ein eigener Datenstand mit Freigabeentscheidungen meist verständlicher als das Überladen eines einzigen `approved_by`-Feldes. Solche Erweiterungen brauchen passende Datenmodelle und Tests für direkte Aktionsaufrufe sowie gleichzeitige Änderungen.
 
-### 17.3 Beispiel: Dokumente nach Abteilung trennen
+### 17.3 Beispiel: Aufgaben nach Abteilung trennen
 
-Eine Abteilungsgrenze berührt nicht nur die Dokumentenliste. Sie muss in Sichtbarkeit, Download, Export, Statusabfrage, KI-Laufansicht und jeder bearbeitenden Aktion gelten. Neue Datensätze benötigen eine verlässliche Zuordnung; ein Client darf diese Zuordnung nicht beliebig auf eine fremde Abteilung setzen.
+Eine Abteilungsgrenze berührt nicht nur die Aufgabenliste. Sie muss in Sichtbarkeit, Download, Export, Statusabfrage, KI-Ausführungsansicht und jeder bearbeitenden Aktion gelten. Neue Datensätze benötigen eine verlässliche Zuordnung; ein Client darf diese Zuordnung nicht beliebig auf eine fremde Abteilung setzen.
 
-Ein Listenfilter ist daher keine ausreichende Umsetzung. Die Query der Oberfläche muss begrenzt werden, und die Policies müssen dieselbe fachliche Regel auch bei einer direkt eingegebenen Dokument-ID durchsetzen. Die Tests sollten mindestens zwei Benutzer aus verschiedenen Abteilungen und direkte Zugriffe auf fremde Ressourcen enthalten.
+Ein Listenfilter ist daher keine ausreichende Umsetzung. Die Query der Oberfläche muss begrenzt werden, und die Policies müssen dieselbe fachliche Regel auch bei einer direkt eingegebenen Aufgabe-ID durchsetzen. Die Tests sollten mindestens zwei Benutzer aus verschiedenen Abteilungen und direkte Zugriffe auf fremde Ressourcen enthalten.
 
 Diese Änderung bleibt innerhalb einer Firma möglich und erfordert nicht automatisch Multitenancy. Mehrere rechtlich oder betrieblich getrennte Kunden in derselben Installation wären dagegen eine neue Architekturentscheidung.
 
 ### 17.4 Modell und Prompt wechseln
 
-Ein Modellwechsel für neue Läufe erfolgt zentral über `AI_MODEL`. App und Worker werden danach mit der geänderten Konfiguration neu erstellt. Bereits angelegte Läufe behalten ihre gespeicherte Modellkennung und Treiberkennung. URL, Zugangsdaten und der aktuelle Adaptercode werden dabei nicht historisch eingefroren.
+Ein Modellwechsel für neue Ausführungen erfolgt zentral über `AI_MODEL`. App und Worker werden danach mit der geänderten Konfiguration neu erstellt. Bereits angelegte Ausführungen behalten ihre gespeicherte Modellkennung und Treiberkennung. URL, Zugangsdaten und der aktuelle Adaptercode werden dabei nicht historisch eingefroren.
 
-Eine Promptänderung sollte mit einer erhöhten `prompt_version`, einem bewerteten Beispieldatensatz und Regressionstests verbunden werden. Für bereits wartende Läufe gibt es zwei saubere Möglichkeiten: Sie werden vor dem Wechsel abgearbeitet, oder die Anwendung kann die alte Promptversion weiterhin auf den alten Promptinhalt auflösen. Der jetzige Code implementiert eine solche Promptregistrierung noch nicht.
+Eine Promptänderung sollte mit einer erhöhten `prompt_version`, einem bewerteten Beispieldatensatz und Regressionstests verbunden werden. Für bereits wartende Ausführungen gibt es zwei saubere Möglichkeiten: Sie werden vor dem Wechsel abgearbeitet, oder die Anwendung kann die alte Promptversion weiterhin auf den alten Promptinhalt auflösen. Der jetzige Code implementiert eine solche Promptregistrierung noch nicht.
 
 Ein erfolgreich dekodierter Modelloutput reicht als Abnahmekriterium nicht aus. Auf demselben repräsentativen Satz von Eingaben sollten Feldrichtigkeit, ungültige Antworten, Bearbeitungsbedarf, Laufzeit und Tokenverbrauch verglichen werden. Ein günstigeres Modell ist fachlich nur dann vorteilhaft, wenn die zusätzliche menschliche Nacharbeit den Vorteil nicht wieder aufzehrt.
 
 ### 17.5 Einen weiteren Anbieter integrieren
 
-Das SDK unterstützt mehr Anbieter als der aktuelle Adapter. Ein zusätzlicher Anbieter wird dennoch bewusst integriert: Endpunkt, Authentifizierung, Schemaunterstützung, Fehlerarten, Tokenzählung und Timeouts müssen geprüft werden. Die gleiche SDK-Methode garantiert keine identische Semantik aller Modelle.
+Das SDK unterstützt mehr Anbieter als die drei konfigurierten Driver. Ein zusätzlicher Anbieter wird dennoch bewusst integriert: Endpunkt, Authentifizierung, Schemaunterstützung, Fehlerarten, Tokenzählung und Timeouts müssen geprüft werden. Die gleiche SDK-Methode garantiert keine identische Semantik aller Modelle. Ein neuer Driver implementiert `LlmDriver`, wird in `LlmProviderFactory::PROVIDERS` aufgenommen und erhält eigene Tests gegen HTTP-Fixtures.
 
-Die fachliche Grenze bleibt `DocumentExtractor`. Ein weiterer Adapter oder eine ausdrücklich unterstützte Anbieterwahl kann dort ergänzt werden. Filament, Freigabe und Korrektur sollten davon möglichst wenig wissen. Die persistierte Anbieterkennung muss dann eindeutig genug werden, um alte Läufe korrekt zuzuordnen; das heutige `live` steht ausschließlich für den implementierten OpenAI-Weg.
+Die fachliche Grenze bleibt `TaskExtractor`. Der Driverwechsel erfolgt ausschließlich über `AI_LIVE_PROVIDER`; Filament, Freigabe und Korrektur wissen davon möglichst wenig. Die persistierte Anbieterkennung (`live:<driver>`, Altbestand `live`) bleibt eindeutig genug, um alte Ausführungen korrekt zuzuordnen.
 
 ### 17.6 Weiterentwicklung mit Coding-Agenten
 
-Ein Agent beginnt mit `AGENTS.md`, den betroffenen Anwendungsklassen und den vorhandenen Tests. Der Arbeitsauftrag sollte den konkreten Verhaltenswechsel beschreiben: beispielsweise „Ein reviewer darf Dokumente seines eigenen Uploads nicht mehr freigeben, direkte Aktionen eingeschlossen“. Das ist überprüfbarer als „Berechtigungen verbessern“.
+Ein Agent beginnt mit `AGENTS.md`, den betroffenen Anwendungsklassen und den vorhandenen Tests. Der Arbeitsauftrag sollte den konkreten Verhaltenswechsel beschreiben: beispielsweise „Ein reviewer darf Aufgaben seines eigenen Uploads nicht mehr freigeben, direkte Aktionen eingeschlossen“. Das ist überprüfbarer als „Berechtigungen verbessern“.
 
 Generierte Dateien sind ein Ausgangspunkt, keine fertige fachliche Implementierung. Policies, sensible Felder, Aktionen und Migrationen müssen nach einem Generatorlauf geprüft werden. Insbesondere dürfen neue Filament-Ressourcen nicht unbemerkt Standardaktionen zum Löschen oder Bearbeiten schützenswerter Datensätze veröffentlichen.
 
-Ein sinnvoller Abschluss umfasst die gezielten Tests, Formatierung, statische Analyse und eine aktualisierte Dokumentation der geänderten Regel. Neue Unterdrückungen von Analysefehlern oder das Entfernen negativer Tests sind keine akzeptable Abkürzung. Geheimnisse und echte Kundendokumente gehören nicht in Prompts, Debugausgaben oder eingecheckte Fixtures.
+Ein sinnvoller Abschluss umfasst die gezielten Tests, Formatierung, statische Analyse und eine aktualisierte Dokumentation der geänderten Regel. Neue Unterdrückungen von Analysefehlern oder das Entfernen negativer Tests sind keine akzeptable Abkürzung. Geheimnisse und echte Kundenaufgaben gehören nicht in Prompts, Debugausgaben oder eingecheckte Fixtures.
 
 <a id="betrieb"></a>
 ## 18. Produktionsbetrieb und Deployment
@@ -753,7 +746,7 @@ Ein Image-Rollback ist kein Datenbank-Rollback. Neue Migrationen sollten nach M�
 
 ### 18.6 Überwachung und Recovery
 
-Die Healthchecks prüfen PostgreSQL-Erreichbarkeit, FPM-Ping, HTTP-Startfähigkeit und beim Worker zusätzlich Prozess, Datenbank und beschreibbaren privaten Storage. Sie beweisen nicht, dass Entra oder OpenAI gerade erreichbar sind, und sie messen nicht die fachliche Qualität oder das Alter sämtlicher wartender Jobs.
+Die Healthchecks prüfen PostgreSQL-Erreichbarkeit, FPM-Ping, HTTP-Startfähigkeit und beim Worker zusätzlich Prozess, Datenbank und beschreibbaren privaten Storage. Sie beweisen nicht, dass Entra oder der konfigurierte KI-Anbieter gerade erreichbar sind, und sie messen nicht die fachliche Qualität oder das Alter sämtlicher wartender Jobs.
 
 `restart: unless-stopped` startet beendete Container neu. Ein Containerzustand `unhealthy` allein löst bei diesem Compose-Aufbau keinen automatischen Austausch aus. Der Kundenbetrieb benötigt deshalb Überwachung und eine zuständige Person oder einen zuständigen Dienst.
 
@@ -770,7 +763,7 @@ Pfad, Betriebskonto und Logrotation sind an die Installation anzupassen. Eine Te
 
 ### 19.1 Was gesichert werden muss
 
-Die fachlichen Daten verteilen sich auf PostgreSQL und die privaten Originaldateien. Ein Datenbankdump allein enthält nicht die hochgeladenen Texte. Ein Dateiarchiv allein enthält weder Rollen noch Ergebnisse noch die Beziehungen zu den Dokumenten. Beide müssen einen zusammenpassenden Zeitpunkt repräsentieren.
+Die fachlichen Daten verteilen sich auf PostgreSQL und die privaten Originaldateien. Ein Datenbankdump allein enthält nicht die hochgeladenen Texte. Ein Dateiarchiv allein enthält weder Rollen noch Ergebnisse noch die Beziehungen zu den Aufgaben. Beide müssen einen zusammenpassenden Zeitpunkt repräsentieren.
 
 Für die Wiederinbetriebnahme werden außerdem die passenden Images beziehungsweise der passende Quellstand, die Konfiguration und der APP_KEY benötigt. Geheimnisse werden separat gesichert und nicht beliebig in dasselbe ungeschützte Archiv geschrieben. Ein Backup auf derselben Festplatte schützt nicht vor Verlust des Servers oder Datenträgers.
 
@@ -790,7 +783,7 @@ Das Skript verschlüsselt und überträgt keine Archive und richtet keine Aufbew
 
 Die vollständigen Restore-Kommandos stehen in [Deployment/Backup](deployment.md). Eine Probe erfolgt in einer eigenen leeren Installation mit eigenen Volumes. Zuerst werden Archive und Prüfsummen geprüft, danach Datenbank und Dateien wiederhergestellt und erforderliche Migrationen ausgeführt. Erst anschließend werden Web und Worker gestartet.
 
-Die Abnahme betrachtet Dokumentzahlen, Datei-Prüfsummen, Rollen, freigegebene Ergebnisse und den Queuezustand. Ein erfolgreiches `pg_restore` allein ist kein vollständiger Anwendungstest. Wiederhergestellte offene KI-Läufe können beim Workerstart über Queue und Recovery erneut verarbeitet werden. In einer Restore-Probe müssen deshalb mögliche externe Aufrufe bewusst kontrolliert werden; produktive Zugangsdaten sollten nicht unbedacht mitgestartet werden.
+Die Abnahme betrachtet Aufgabenzahlen, Datei-Prüfsummen, Rollen, freigegebene Ergebnisse und den Queuezustand. Ein erfolgreiches `pg_restore` allein ist kein vollständiger Anwendungstest. Wiederhergestellte offene KI-Ausführungen können beim Workerstart über Queue und Recovery erneut verarbeitet werden. In einer Restore-Probe müssen deshalb mögliche externe Aufrufe bewusst kontrolliert werden; produktive Zugangsdaten sollten nicht unbedacht mitgestartet werden.
 
 Es gibt kein Point-in-Time-Recovery, keine fortlaufende WAL-Archivierung und keine zugesagten Wiederanlaufzeiten. Gewünschter maximaler Datenverlust und maximale Ausfallzeit müssen vereinbart und durch einen passenden Sicherungsbetrieb belegt werden.
 
@@ -804,10 +797,10 @@ Es gibt kein Point-in-Time-Recovery, keine fortlaufende WAL-Archivierung und kei
 | Loginseite nicht erreichbar | Containerstatus, Hostbindung, Port, Nginx-/FPM-Health | Datenbank zurücksetzen |
 | Microsoft-Anmeldung nicht konfiguriert | Tenant-/Client-UUID, Secret, Redirect-URI | Öffentlichen lokalen Passwortlogin ergänzen |
 | Erfolgreicher Entra-Login, aber kein Zugang | Lokales Konto und Aktivierung | Externe Gruppen ungeprüft zu Adminrechten machen |
-| Dokument bleibt wartend | Workerzustand, `available_at`, Lease, Queue und Recovery-Cron | Beliebig viele parallele Worker oder unkontrolliertes `queue:retry all` |
+| Aufgabe bleibt wartend | Workerzustand, `available_at`, Lease, Queue und Recovery-Cron | Beliebig viele parallele Worker oder unkontrolliertes `queue:retry all` |
 | Modellantwort abgelehnt | Fehlerkategorie, Konfiguration und synthetische Reproduktion | Vertrauliche Rohantwort in gewöhnliche Logs schreiben |
 | Korrektur kann nicht gespeichert werden | Feldfehler und veraltete Revision | Revisionsprüfung entfernen |
-| Kein CSV-Export | Rolle und Geschäftsstatus | Nur den Button sichtbar machen |
+| Kein Export | Rolle und Geschäftsstatus | Nur den Button sichtbar machen |
 | Telescope liefert 404 | Umgebung `local`, Paket vorhanden, Aktivierung, neu erstellter Prozess | Telescope global in Produktionsproviders registrieren |
 
 Die folgenden Betriebsbefehle sind für den jeweils gewählten Compose-Kontext gedacht. In Produktion ohne Entwicklungs-Override ausführen; lokal entsprechend `./bin/dev artisan` oder den vollständigen Entwicklungs-Compose-Befehl verwenden.
@@ -819,7 +812,7 @@ docker compose exec -T app php artisan app:health
 docker compose exec -T app php artisan queue:failed
 ```
 
-Die fachliche KI-Laufübersicht ist oft aussagekräftiger als allein `queue:failed`: Ein fachlicher Extraktionsfehler wird kontrolliert im Lauf gespeichert und muss nicht als unbehandelte Laravel-Exception in `failed_jobs` erscheinen.
+Die fachliche KI-Ausführungsübersicht ist oft aussagekräftiger als allein `queue:failed`: Ein fachlicher Verarbeitungsfehler wird kontrolliert in der Ausführung gespeichert und muss nicht als unbehandelte Laravel-Exception in `failed_jobs` erscheinen.
 
 ### 20.2 Abhängigkeiten und Images aktualisieren
 
@@ -835,7 +828,7 @@ Zu beobachten sind unter anderem HTTP-Laufzeiten, Datenbanklast, Alter wartender
 
 Ein Worker verarbeitet die Jobs grundsätzlich nacheinander. Rein rechnerisch entsprächen acht Sekunden pro erfolgreichem Job ohne jeden Zusatzaufwand ungefähr 450 Jobs pro Stunde. Das ist nur eine Rechenillustration für den Fake, kein gemessener oder zugesagter Live-Durchsatz. Providerlimits, Dateizugriffe, Wiederholungen und reale Antwortzeiten verändern das Ergebnis.
 
-Weitere Worker können den Durchsatz erhöhen, solange Datenbank, Host und Anbieterlimits mitwachsen. Die bestehenden Lauf-Leases schützen vor doppelter fachlicher Bearbeitung. Erst bei beobachtetem Bedarf werden weitere Laufzeitdienste oder eine andere Infrastruktur ergänzt.
+Weitere Worker können den Durchsatz erhöhen, solange Datenbank, Host und Anbieterlimits mitwachsen. Die bestehenden Ausführungs-Leases schützen vor doppelter fachlicher Bearbeitung. Erst bei beobachtetem Bedarf werden weitere Laufzeitdienste oder eine andere Infrastruktur ergänzt.
 
 <a id="nicht-enthalten"></a>
 ## 21. Bewusst nicht enthaltene Funktionen
@@ -847,7 +840,7 @@ Weitere Worker können den Durchsatz erhöhen, solange Datenbank, Host und Anbie
 | Redis / Horizon | Datenbank-Queue und Cache decken den Ausgangsfall ab; kein weiterer Dienst nötig | Gemessene Engpässe oder konkret benötigte Queue-Funktionen |
 | PDF und OCR | PDF-Upload, Vorschau und Anbieterübergabe vorhanden; keine OCR für Scans ohne Textebene | Fachlicher Bedarf an Texterkennung aus Bildern und definierte Erkennungsqualität |
 | Chat und Token-Streaming | Die Demo ist eine abgeschlossene Extraktion | Interaktive Unterhaltung wird ein eigener Anwendungsfall |
-| Vektordatenbank / pgvector | Keine Retrievalfunktion vorhanden | Belegbare Suche über einen größeren Wissensbestand |
+| Vektordatenbank / pgvector | Nur Keyword-Retrieval über TXT-Chunks mit Berechtigungsprüfung; Embeddings reserviert | Belegbare Suche über einen größeren Wissensbestand |
 | Python-Dienst | Kein aktueller Bedarf an Python-Spezialbibliotheken | OCR, ML- oder Analysebibliothek rechtfertigt einen separaten Worker |
 | Generisches Workflow-System | Der konkrete Prozess ist mit wenigen Aktionen und Zuständen verständlich | Viele tatsächlich unterschiedliche, langlebige Prozesse mit wiederkehrenden Anforderungen |
 | Pest zusätzlich zu PHPUnit | Bestehende Tests liefern den benötigten Nachweis; kein Nutzen durch zwei Schreibweisen | Teamentscheidung für eine bewusste Migration |
@@ -858,12 +851,12 @@ Weitere Worker können den Durchsatz erhöhen, solange Datenbank, Host und Anbie
 | Freie Rollen-/Rechteverwaltung | Drei feste Rollen bilden den vereinbarten Grundfall ab | Kunden verlangen fachlich begründete konfigurierbare Rechte |
 | Globaler Entra-Logout / laufender Verzeichnisabgleich | Lokale Session und lokale Rechte sind maßgeblich | Zentrale sofortige Sitzungswiderrufe werden gefordert |
 | Wiederöffnen, Löschen, Aufbewahrungsautomatik | Dafür fehlen bestätigte fachliche Regeln | Kundenprozess und Datenlebenszyklus sind festgelegt |
-| Automatische Rechnungsbuchung / ERP-Schnittstelle | Die Demo endet bei kontrollierter Freigabe und CSV | Konkrete Zielsysteme mit abgestimmtem Datenvertrag |
+| Automatische Rechnungsbuchung / ERP-Schnittstelle | Die Demo endet bei kontrollierter Freigabe und JSON; CSV nur im Rechnungsbeispiel | Konkrete Zielsysteme mit abgestimmtem Datenvertrag |
 | Hochverfügbarkeit und automatische Notfallumschaltung | Einzelserver als Vorgabe | Verbindliche Verfügbarkeitsziele erfordern mehr |
 
 Die meisten Auslassungen sind keine technische Unmöglichkeit. Sie begrenzen die Zahl ungenutzter Komponenten, die bei jedem Kunden installiert, aktualisiert und erklärt werden müssten. Jede neue Komponente sollte eine konkrete Anforderung bedienen und ihre eigenen Tests, Betriebsfolgen und Zuständigkeiten mitbringen.
 
-PDF/OCR sollte als Texterkennung für Scans ohne Textebene vor dem Extractor entstehen, Chat als eigener autorisierter Streaming-Anwendungsfall, Retrieval zunächst mit passenden PostgreSQL-Erweiterungen und einem Berechtigungskonzept. Ein Python-Worker kann später einen eng definierten Auftrag erhalten, während Laravel weiterhin Benutzer, Freigaben und fachliche Zustände verwaltet. Diese Richtungen sind Erweiterungsvorschläge, keine bereits vorhandenen Implementierungen.
+PDF/OCR sollte als Texterkennung für Scans ohne Textebene vor dem Extractor entstehen, Chat als eigener autorisierter Streaming-Anwendungsfall, Retrieval bislang als Keyword-Suche mit Berechtigungsprüfung vor dem Abruf (`RetrieveChunks`); Embeddings und Vektorsuche folgen bei belegtem Bedarf. Ein Python-Worker kann später einen eng definierten Auftrag erhalten, während Laravel weiterhin Benutzer, Freigaben und fachliche Zustände verwaltet. Diese Richtungen sind Erweiterungsvorschläge, keine bereits vorhandenen Implementierungen.
 
 <a id="quellen"></a>
 ## 22. Begriffe und weiterführende Dokumentation
@@ -871,14 +864,18 @@ PDF/OCR sollte als Texterkennung für Scans ohne Textebene vor dem Extractor ent
 | Begriff | Bedeutung in diesem Projekt |
 | --- | --- |
 | Tenant | Der konfigurierte Entra-Mandant; keine interne Multitenancy-Funktion |
+| Task | Die zu verarbeitende Aufgabe mit Datei, Status und Ergebnis-Payload |
+| Execution | Eine beauftragte KI-Verarbeitung mit Versuchen, Lease und Ergebnis |
 | Policy | Zentrale Entscheidung darüber, ob ein Benutzer eine Aktion auf einer Ressource ausführen darf |
-| Lease | Zeitlich begrenzte Beanspruchung eines KI-Laufs durch einen Worker mit Besitzerkennung |
+| Lease | Zeitlich begrenzte Beanspruchung einer KI-Ausführung durch einen Worker mit Besitzerkennung |
 | Idempotenz | Wiederholte Ausführung erzeugt keine wiederholte fachliche Übernahme desselben Ergebnisses |
-| Revision | Nummer des aktuell bearbeiteten Dokumentstands |
+| Revision | Nummer des aktuell bearbeiteten Aufgabenstands |
 | Structured Output | Schemaorientierte Modellantwort; muss zusätzlich fachlich validiert werden |
 | Fake | Deterministischer Ersatz für den Anbieter zur Entwicklung und Prüfung |
+| Driver | Genau ein konfigurierter Live-Anbieter (`openai`, `azure`, `ollama`); kein Failover |
+| ResultValidator | Serverseitige Prüfung des Ergebnis-Payloads; Fachmodule liefern eigene Implementierungen |
 | Audit | Gespeicherte fachliche Aktion mit Akteur, Zeitpunkt und ausgewählten Änderungen |
-| Recovery | Erneutes Zustellen fälliger verwaister Laufabsichten |
+| Recovery | Erneutes Zustellen fälliger verwaister Ausführungsabsichten |
 | Lockfile | Festgelegte konkrete Paketauflösung für wiederholbare Installation |
 
 ### Interne Dokumente

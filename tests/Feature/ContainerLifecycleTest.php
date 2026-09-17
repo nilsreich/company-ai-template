@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Actions\UploadDocument;
-use App\Enums\RunStatus;
+use App\Actions\UploadTask;
+use App\Enums\ExecutionStatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -21,12 +21,12 @@ class ContainerLifecycleTest extends TestCase
         Storage::fake('private');
         $user = User::factory()->create();
         DB::beginTransaction();
-        $document = app(UploadDocument::class)->handle($user, UploadedFile::fake()->createWithContent('invoice.txt', 'Real queue fixture'));
+        $task = app(UploadTask::class)->handle($user, UploadedFile::fake()->createWithContent('invoice.txt', 'Real queue fixture'));
         $this->assertSame(0, DB::table('jobs')->count());
         DB::commit();
         $this->assertSame(1, DB::table('jobs')->count());
         $this->artisan('queue:work', ['connection' => 'database', '--once' => true])->assertSuccessful();
         $this->assertSame(0, DB::table('jobs')->count());
-        $this->assertSame(RunStatus::Succeeded, $document->runs()->sole()->status);
+        $this->assertSame(ExecutionStatus::Succeeded, $task->executions()->sole()->status);
     }
 }

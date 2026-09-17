@@ -7,11 +7,11 @@ Ausführlicher Einstieg: `docs/index.md`, `docs/template-handbuch.md` und `docs/
 - Eine Firma pro Installation; keine Multitenancy, SPA/API-Trennung oder zusätzlichen Laufzeitdienste ohne konkreten Bedarf.
 - Laravel 13 / PHP 8.5, Filament 5 / Livewire 4, PostgreSQL 18. Konkrete PHP-/JS-Abhängigkeiten stehen in composer.lock und package-lock.json. Keine unbegründeten Versionsabweichungen oder ignorierten Plattformanforderungen.
 - Filament beschreibt Darstellung und delegiert an `app/Actions`. Menschlich ausgelöste Anwendungsklassen autorisieren mittels Policies. Policies laden lokale Berechtigungen frisch. UI-Sichtbarkeit ersetzt keine Autorisierung.
-- `DocumentExtractor` ist die Anbietergrenze. Keine Anbieterlogik in Jobs oder Filament; keine Tools für Dokumentinhalte. Ergebnisse strikt serverseitig validieren; Geld niemals als Float.
-- Live-Extraktion verwendet Laravel AI SDK mit genau einem Provider und Schritt. SDK-Upgrades müssen HTTP-Anzahl, Redirect-Sperre, Timeouts, Fehlerkategorien und Servervalidierung erhalten; keine SDK-Queue zusätzlich zum bestehenden Job. Der deterministische Fake bleibt unabhängig.
+- `TaskExtractor` ist die Anbietergrenze. Keine Anbieterlogik in Jobs oder Filament; keine Tools für Aufgabeninhalte. Ergebnisse strikt serverseitig über `ResultValidator` validieren. Fachmodule liefern Agent (`TaskAgent`), Validator und Export (Vorlage: `examples/invoice-extraction`).
+- Live-Verarbeitung verwendet Laravel AI SDK mit genau einem Driver (`openai`, `azure`, `ollama` via `AI_LIVE_PROVIDER`) und Schritt. SDK-Upgrades müssen HTTP-Anzahl, Redirect-Sperre, Timeouts, Fehlerkategorien und Servervalidierung erhalten; keine SDK-Queue zusätzlich zum bestehenden Job. Der deterministische Fake bleibt unabhängig.
 - Telescope ist `require-dev`, ohne Auto-Discovery, nur lokal und explizit aktiviert. Nur aktive Admins erhalten Zugriff. Die Watcher-Allowlist und Bereinigung vertraulicher Daten nicht durch Paketdefaults ersetzen; lokale Migrationen niemals in Produktion hinzuladen.
-- Dokumentstatus und Laufstatus bleiben getrennt. Ein Erfolg ist keine Freigabe. Freigegebene Dokumente nicht verändern.
-- Externe Aufrufe außerhalb von DB-Transaktionen. Lauf-Lease und Besitzerkennung, begrenztes Versuchsbudget sowie Eingabe-/Bearbeitungsrevisionen beim Abschluss prüfen. Job-Payload enthält nur die Lauf-ID.
+- Aufgabenstatus und Ausführungsstatus bleiben getrennt. Ein Erfolg ist keine Freigabe. Freigegebene Aufgaben nicht verändern.
+- Externe Aufrufe außerhalb von DB-Transaktionen. Ausführungs-Lease und Besitzerkennung, begrenztes Versuchsbudget sowie Eingabe-/Bearbeitungsrevisionen beim Abschluss prüfen. Job-Payload enthält nur die Ausführungs-ID.
 - Änderungen an Jobs erfordern Worker-Neustart. HTTP 30 s < Job 60 s < Lease 90 s < retry_after 120 s. Keine HTTP-Retries zusätzlich zu Job-Retries.
 - Private Originale und Audit-Daten nicht in gewöhnliche Logs schreiben. Keine Tokens, Schlüssel oder Provider-Rohantworten in Exceptions übernehmen.
 - Entra-Identität ist `(tid, oid)`, nie E-Mail. Externe Rollen nicht in lokale Rollen übernehmen. Entwicklungslogin zusätzlich zur Umgebungsvariable mit local/testing absichern.
@@ -27,11 +27,11 @@ Ausführlicher Einstieg: `docs/index.md`, `docs/template-handbuch.md` und `docs/
 ./bin/dev artisan ai:recover
 ./bin/dev artisan telescope:prune --hours=24
 docker compose -f compose.yaml -f compose.dev.yaml exec -T app vendor/bin/pint
-docker compose -f compose.yaml -f compose.dev.yaml exec -T app vendor/bin/phpunit --filter=DocumentFlowTest
+docker compose -f compose.yaml -f compose.dev.yaml exec -T app vendor/bin/phpunit --filter=TaskFlowTest
 npm run test:e2e
-PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser node tests/operations/telescope.cjs
+PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser npx playwright test telescope
 docker compose build app web
-python3 tests/operations/lifecycle.py
+php tests/operations/lifecycle.php
 ```
 
 Die Browserbefehle setzen Node 24 und einen installierten Playwright-Browser voraus. Auf Alpine `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser` setzen. Betriebsprüfungen unterbrechen den lokalen Stack; niemals gegen eine Kundeninstallation ausführen. Testdatenbank ist ausschließlich `company_ai_test`.

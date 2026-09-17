@@ -1,6 +1,6 @@
-# KI-Dokumentenprüfung für eine Firma
+# KI-Aufgaben für eine Firma
 
-Laravel 13, Filament 5 / Livewire 4, PHP 8.5, PostgreSQL 18. Eine Installation gehört genau einer Firma. Enthalten sind Entra-Anmeldung, lokale Rollen, private PDF-/TXT-Uploads, KI-Verarbeitung per Datenbank-Queue, Korrektur, Freigabe, CSV-Export und Audit-Einträge.
+Laravel 13, Filament 5 / Livewire 4, PHP 8.5, PostgreSQL 18. Eine Installation gehört genau einer Firma. Enthalten sind Entra-Anmeldung, lokale Rollen, private PDF-/TXT-Uploads, KI-Verarbeitung per Datenbank-Queue, Korrektur, Freigabe, JSON-Export und Audit-Einträge (Rechnungsbeispiel: examples/invoice-extraction).
 
 Die **[vollständige Dokumentation](docs/index.md)** enthält ein ausführliches [Handbuch](docs/template-handbuch.md) mit Nutzung, Architektur, exakter Funktionsweise und Kundenanpassung sowie eine [technische Analyse](docs/template-analyse.md) mit Begründungen, Grenzen und priorisierten nächsten Schritten.
 
@@ -50,22 +50,22 @@ Prüfung:
 
 ```sh
 docker compose -f compose.yaml -f compose.dev.yaml exec -T app vendor/bin/phpunit --filter=FeedbackTest
-node tests/operations/feedback.cjs
+npx playwright test feedback
 # Optional: legt genau ein markiertes Test-Issue mit dem Demo-Konto an:
-LIVE_GITHUB_FEEDBACK_TEST=1 node tests/operations/feedback.cjs
+LIVE_GITHUB_FEEDBACK_TEST=1 npx playwright test feedback
 ```
 
 Der Browsertest verwendet System-Chromium, eine vorübergehende reine Loopback-Weiterleitung auf `E2E_BASE_URL` (Standard: LAN-Demo) und die echte native Tab-Aufnahme mit automatischer Auswahl ausschließlich im Test. Er verändert keine Browser-Sicherheitseinstellungen der Anwendung. Ohne den expliziten Live-Schalter wird die Versandantwort im Browser simuliert; mit ihm werden zusätzlich der echte Issue-Versand und das identische, geschwärzte PNG beim Admin-Download geprüft.
 
-## Dokumentenablauf
+## Aufgabenablauf
 
-1. Als editor anmelden, unter **Dokumente → Erstellen** eine PDF-Datei (Standardlimit 8 MiB, Vorschau im Browser) oder eine UTF-8-TXT-Datei (Standardlimit 256 KiB) hochladen.
-2. Detailseite zeigt Originaltext und laufenden Status; nach der Extraktion endet das Polling.
-3. **Werte korrigieren**, Felder prüfen und speichern. Auch während des Bearbeitens ist der Originaltext sichtbar.
+1. Als editor anmelden, unter **Aufgaben → Erstellen** eine PDF-Datei (Standardlimit 8 MiB, Vorschau im Browser) oder eine UTF-8-TXT-Datei (Standardlimit 256 KiB) hochladen.
+2. Detailseite zeigt Original und laufenden Status; nach der Verarbeitung endet das Polling.
+3. **Werte korrigieren**, Titel und Ergebnis-JSON prüfen und speichern. Auch während des Bearbeitens ist das Original sichtbar.
 4. Als reviewer oder admin anmelden und **Freigeben** bestätigen.
-5. **CSV exportieren**. Freigegebene Dokumente sind schreibgeschützt.
+5. **JSON exportieren**. Freigegebene Aufgaben sind schreibgeschützt.
 
-Der Fake liefert absichtlich feste Demonstrationswerte; die Rechnungsnummer hängt reproduzierbar vom Eingabetext ab. Er dient der Integration, nicht der fachlichen Erkennungsqualität. `AI_FAKE_SCENARIO=success|timeout|rate_limit|invalid` steuert die Fehlerfälle. Nach Änderungen an `.env` App und Worker über `./bin/dev up` neu erstellen lassen; für reine Codeänderungen den Worker mit `docker compose -f compose.yaml -f compose.dev.yaml restart worker` neu starten.
+Der Fake liefert absichtlich feste Demonstrationswerte (Zusammenfassung, Auszug, Sprache). Er dient der Integration, nicht der fachlichen Erkennungsqualität. `AI_FAKE_SCENARIO=success|timeout|rate_limit|invalid` steuert die Fehlerfälle. Nach Änderungen an `.env` App und Worker über `./bin/dev up` neu erstellen lassen; für reine Codeänderungen den Worker mit `docker compose -f compose.yaml -f compose.dev.yaml restart worker` neu starten.
 
 ## Prüfungen
 
@@ -87,16 +87,16 @@ Auf Alpine kann ein System-Chromium verwendet werden: `PLAYWRIGHT_CHROMIUM_EXECU
 
 ```sh
 docker compose build app web
-python3 tests/operations/lifecycle.py
+php tests/operations/lifecycle.php
 ```
 
-Die zusätzliche Betriebsprüfung benötigt Python 3, freie Loopback-Ports 8080/8081 und den lokalen Fake mit acht Sekunden Verzögerung. Sie unterbricht kurz den **lokalen** Stack, beendet einen Worker mit SIGKILL und wartet auf den echten Queue-Wiederanlauf. Anschließend prüft sie einen separaten, leeren Produktionsstack und stellt darin Datenbank und Dateien wieder her. Nur das eigens erzeugte Compose-Projekt `company-ai-smoke` wird danach inklusive seiner Volumes entfernt.
+Die zusätzliche Betriebsprüfung benötigt PHP auf dem Host, freie Loopback-Ports 8080/8081 und den lokalen Fake mit acht Sekunden Verzögerung. Sie unterbricht kurz den **lokalen** Stack, beendet einen Worker mit SIGKILL und wartet auf den echten Queue-Wiederanlauf. Anschließend prüft sie einen separaten, leeren Produktionsstack und stellt darin Datenbank und Dateien wieder her. Nur das eigens erzeugte Compose-Projekt `company-ai-smoke` wird danach inklusive seiner Volumes entfernt.
 
 [Ausgeführte Prüfungen und Grenzen](docs/verification.md) · [Architektur](docs/architecture.md) · [Entra](docs/entra.md) · [KI-Adapter](docs/ai.md) · [Paketauswahl und Telescope](docs/packages.md) · [Deployment/Backup](docs/deployment.md) · [Neues Kundenprojekt](docs/new-customer.md)
 
 ## Entwicklungswerkzeuge und KI-SDK
 
-Der Live-Adapter verwendet **Laravel AI SDK 0.11.2** für OpenAI Structured Outputs. Der lokale Fake bleibt ohne Schlüssel nutzbar. **Telescope 5.24.0** ist eine Entwicklungsabhängigkeit: mit `TELESCOPE_ENABLED=true` und `./bin/dev up` lokal aktivieren, als aktiver admin anmelden und `/telescope` öffnen. Es zeigt bereinigte Request-/Query-Laufzeiten; Dokumenttexte, SQL-Bindings, Sessions und ausgehende KI-Aufrufe werden nicht gespeichert. In Produktion wird Telescope auch bei gesetztem Schalter nicht registriert. [Details und Aufbewahrung](docs/packages.md).
+Der Live-Adapter verwendet **Laravel AI SDK 0.11.2** für strukturierte Ausgaben über umschaltbare Driver (OpenAI, Azure, Ollama). Der lokale Fake bleibt ohne Schlüssel nutzbar. **Telescope 5.24.0** ist eine Entwicklungsabhängigkeit: mit `TELESCOPE_ENABLED=true` und `./bin/dev up` lokal aktivieren, als aktiver admin anmelden und `/telescope` öffnen. Es zeigt bereinigte Request-/Query-Laufzeiten; Aufgabentexte, SQL-Bindings, Sessions und ausgehende KI-Aufrufe werden nicht gespeichert. In Produktion wird Telescope auch bei gesetztem Schalter nicht registriert. [Details und Aufbewahrung](docs/packages.md).
 
 ## Produktion
 

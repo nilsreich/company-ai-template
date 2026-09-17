@@ -2,10 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Actions\ApproveDocument;
-use App\Actions\CorrectDocument;
-use App\Actions\ExportDocument;
-use App\Actions\ProcessExtraction;
+use App\Actions\ApproveTask;
+use App\Actions\CorrectTask;
+use App\Actions\ExportTask;
+use App\Actions\ProcessExecution;
 use App\Actions\RejectAuditCleanup;
 use App\Enums\Role;
 use App\Models\AuditEntry;
@@ -21,13 +21,13 @@ class AuditTrailTest extends TestCase
     {
         $editor = User::factory()->create();
         $reviewer = User::factory()->create(['role' => Role::Reviewer]);
-        $document = $this->upload($editor);
-        app(ProcessExtraction::class)->handle($document->runs()->sole()->id);
-        $document = app(CorrectDocument::class)->handle($editor, $document->refresh(), $document->revision, $this->fields());
-        app(ApproveDocument::class)->handle($reviewer, $document->refresh(), $document->revision);
-        app(ExportDocument::class)->handle($reviewer, $document->refresh());
+        $task = $this->upload($editor);
+        app(ProcessExecution::class)->handle($task->executions()->sole()->id);
+        $task = app(CorrectTask::class)->handle($editor, $task->refresh(), $task->revision, $this->taskPayload());
+        app(ApproveTask::class)->handle($reviewer, $task->refresh(), $task->revision);
+        app(ExportTask::class)->handle($reviewer, $task->refresh());
 
-        $entries = AuditEntry::where('document_id', $document->id)->orderBy('chain_position')->get();
+        $entries = AuditEntry::where('task_id', $task->id)->orderBy('chain_position')->get();
         $this->assertGreaterThanOrEqual(5, $entries->count());
         $positions = $entries->pluck('chain_position')->all();
         $sorted = $positions;
@@ -38,7 +38,7 @@ class AuditTrailTest extends TestCase
             $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $entry->entry_hash);
             $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $entry->previous_hash);
         }
-        foreach (['document_received', 'extraction_completed', 'corrected', 'approved', 'exported'] as $action) {
+        foreach (['task_received', 'execution_completed', 'corrected', 'approved', 'exported'] as $action) {
             $this->assertTrue($entries->contains('action', $action), 'Audit-Aktion fehlt: '.$action);
         }
 
@@ -48,8 +48,8 @@ class AuditTrailTest extends TestCase
     public function test_audit_eintraege_sind_unveraenderbar(): void
     {
         $user = User::factory()->create();
-        $document = $this->upload($user);
-        $entry = AuditEntry::where('document_id', $document->id)->firstOrFail();
+        $task = $this->upload($user);
+        $entry = AuditEntry::where('task_id', $task->id)->firstOrFail();
 
         $this->expectException(\Throwable::class);
         $entry->update(['description' => 'manipuliert']);

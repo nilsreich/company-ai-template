@@ -28,7 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->brandName('Dokumentenprüfung')
+            ->brandName('KI-Aufgaben')
             ->authGuard('web')
             ->renderHook(PanelsRenderHook::BODY_END, fn () => view('partials.feedback'))
             ->colors([

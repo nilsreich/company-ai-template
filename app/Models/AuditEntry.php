@@ -19,7 +19,7 @@ class AuditEntry extends Activity
             $causerId = $entry->causer_id;
             $subjectId = $entry->subject_id;
             $entry->setAttribute('user_id', $entry->causer_type === User::class && is_numeric($causerId) && (int) $causerId > 0 ? (int) $causerId : null);
-            $entry->setAttribute('document_id', $entry->subject_type === Document::class && is_numeric($subjectId) && (int) $subjectId > 0 ? (int) $subjectId : null);
+            $entry->setAttribute('task_id', $entry->subject_type === Task::class && is_numeric($subjectId) && (int) $subjectId > 0 ? (int) $subjectId : null);
             $entry->setAttribute('changes', $entry->properties?->all() ?? []);
         });
         static::updating(fn () => throw new \LogicException('Audit-Einträge sind unveränderbar.'));
