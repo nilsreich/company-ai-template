@@ -9,6 +9,28 @@
                 "artisan",
                 "boost:mcp"
             ]
+        },
+        "vikunja": {
+            "type": "local",
+            "enabled": true,
+            "command": [
+                "npx",
+                "-y",
+                "@0xk3vin/vikunja-mcp"
+            ],
+            "environment": {
+                "VIKUNJA_URL": "{env:VIKUNJA_URL}",
+                "VIKUNJA_API_TOKEN": "{env:VIKUNJA_API_TOKEN}"
+            }
+        },
+        "memos": {
+            "type": "remote",
+            "enabled": true,
+            "url": "http://192.168.178.200:5230/mcp",
+            "oauth": false,
+            "headers": {
+                "Authorization": "Bearer {env:MEMOS_API_TOKEN}"
+            }
         }
     }
 }

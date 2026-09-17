@@ -108,9 +108,79 @@ class TaskFlowTest extends TestCase
     {
         $user = User::factory()->create();
         $task = $this->upload($user);
-        app(CorrectTask::class)->handle($user, $task, 0, $this->taskPayload());
-        $this->expectException(ValidationException::class);
-        app(CorrectTask::class)->handle($user, $task, 0, [...$this->taskPayload(), 'summary' => 'stale']);
+        app(CorrectTask::class)->handle($user, $task, 0, $this->taskPayload(), 'Aktueller Titel');
+
+        try {
+            app(CorrectTask::class)->handle($user, $task, 0, [...$this->taskPayload(), 'summary' => 'stale'], 'Veralteter Titel');
+            $this->fail('Veraltete Revision wurde akzeptiert.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('payload', $exception->errors());
+        }
+
+        $this->assertSame('Aktueller Titel', $task->refresh()->title);
+        $expected = $this->taskPayload();
+        $actual = $task->payload();
+        ksort($expected);
+        ksort($actual);
+        $this->assertSame($expected, $actual);
+        $this->assertSame(1, $task->revision);
+        $this->assertSame(1, AuditEntry::where('action', 'corrected')->count());
+    }
+
+    public function test_correction_updates_title_inside_the_locked_revision(): void
+    {
+        $user = User::factory()->create();
+        $task = $this->upload($user);
+        $updated = app(CorrectTask::class)->handle($user, $task, 0, $this->taskPayload(), '  Neuer Titel  ');
+        $this->assertSame('Neuer Titel', $updated->title);
+        $this->assertSame(1, $updated->revision);
+        $this->assertSame('Neuer Titel', $task->refresh()->title);
+        $entry = AuditEntry::where('action', 'corrected')->sole();
+        $this->assertSame('Neuer Titel', $entry->changes['title_changed']);
+    }
+
+    public function test_unchanged_title_is_not_recorded_as_changed(): void
+    {
+        $user = User::factory()->create();
+        $task = $this->upload($user);
+        $original = $task->title;
+        app(CorrectTask::class)->handle($user, $task, 0, $this->taskPayload(), $original);
+        $this->assertSame($original, $task->refresh()->title);
+        $entry = AuditEntry::where('action', 'corrected')->sole();
+        $this->assertNull($entry->changes['title_changed']);
+    }
+
+    public function test_blank_or_overlong_title_is_rejected_without_writing(): void
+    {
+        $user = User::factory()->create();
+        $task = $this->upload($user);
+        try {
+            app(CorrectTask::class)->handle($user, $task, 0, $this->taskPayload(), '   ');
+            $this->fail('Leerer Titel wurde akzeptiert.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('title', $exception->errors());
+        }
+        try {
+            app(CorrectTask::class)->handle($user, $task, 0, $this->taskPayload(), str_repeat('ü', 256));
+            $this->fail('Zu langer Titel wurde akzeptiert.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('title', $exception->errors());
+        }
+        $this->assertSame(0, $task->refresh()->revision);
+        $this->assertSame([], $task->payload());
+    }
+
+    public function test_edit_page_saves_title_through_the_action(): void
+    {
+        $user = User::factory()->create();
+        $task = $this->upload($user);
+        app(ProcessExecution::class)->handle($task->executions()->sole()->id);
+        $this->actingAs($user);
+        Livewire::test(EditTask::class, ['record' => $task->id])
+            ->fillForm(['title' => 'Vom Formular', 'payload_json' => json_encode($this->taskPayload())])
+            ->call('save')->assertHasNoFormErrors();
+        $this->assertSame('Vom Formular', $task->refresh()->title);
+        $this->assertSame('Korrigierte Zusammenfassung', $task->payload()['summary']);
     }
 
     public function test_export_contains_task_payload_as_json(): void

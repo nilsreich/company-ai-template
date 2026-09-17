@@ -39,8 +39,7 @@ class EditTask extends EditRecord
         assert($actor instanceof User);
         try {
             $payload = TaskForm::decodePayload((string) ($data['payload_json'] ?? ''));
-            $updated = app(CorrectTask::class)->handle($actor, $record, $this->loadedRevision, $payload);
-            $updated->update(['title' => mb_substr((string) ($data['title'] ?? $updated->title), 0, 255)]);
+            $updated = app(CorrectTask::class)->handle($actor, $record, $this->loadedRevision, $payload, isset($data['title']) ? (string) $data['title'] : null);
         } catch (ValidationException $exception) {
             throw ValidationException::withMessages(collect($exception->errors())->mapWithKeys(fn (array $messages, string $field): array => ['data.'.$field => $messages])->all());
         } catch (\JsonException) {
